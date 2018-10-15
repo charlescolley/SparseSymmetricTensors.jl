@@ -1,8 +1,9 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
+module SSSTensor
 using Combinatorics
 
-struct SSSTensor
+mutuable struct SSSTensor
     edges::Dict{Array{Int,1},Number}
     cubical_dimension::Int
     SSSTensor(e,n) =
@@ -128,8 +129,7 @@ Inputs:
   an array of tuples which contain the indices in the first element, and the
   value in the second element. Note each edge's indices must be in range
 -----------------------------------------------------------------------------"""
-function {add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where
-     N <: Number}
+function add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     #check edges' validity
     for (indices,_) in edges
         sort!(indices)
@@ -144,25 +144,6 @@ function {add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where
             A.edges[indices] = v
         end
     end
-end
-
-"""-----------------------------------------------------------------------------
-    expand_with_edges!(A,edges)
-
-This function takes in a list of edges and adds them into the SSSTensor,
-expanding the tensor's dimension if needed. If an edge is already present in the
-tensor, and the value is added in at that index.
-
-Inputs:
--------
-* A - (SSSTensor)
-* edges - (Array{Tuple{Array{Int,1},Number},1})
-  an array of tuples which contain the indices in the first element, and the
-  value in the second element. Note each edge's indices must be in range
------------------------------------------------------------------------------"""
-function expand_with_edges(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1})
-                           where N <:Number
-
 end
 
 #UNTESTED
@@ -211,7 +192,7 @@ end
 
 
 """-----------------------------------------------------------------------------
-    contract_edge(e,x,k)
+    contract_edge_k_1(e,x)
 
 This function takes in an edge of a super symmetric tensor and computes the
 resulting edges which result from contracting the the edge along k-1 modes with
@@ -219,23 +200,42 @@ the vector x, where k is the order of the hyper edge.
 
 Inputs:
 -------
-* e -(Tuple(Array{Int,1},Float)):
+* e -(Tuple(Array{Int,1},Number)):
     a list of sorted indices paired with an edge value. Note that the list of
     indices corresponds to multiple sets of indices because we consider all
     permutations.
-* x -(Array{Float,1})
+* x -(Array{Number,1})
     The vector of the same dimenionality of the tensor, to contract with.
 -----------------------------------------------------------------------------"""
-function contract_edge_k_1(e,x)
-    order = length(e)
+function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Number
+    (indices,val) = e
+    order = length(indices)
 
-    #compute the multiplicities of the indices
-    mulitplicities = Dict()
+    scaling_factors = Dict()
+    contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,order)
+
     for i in 1:order
-        if haskey(multiplicities,e[i])
-            mulitplicities += 1
+        sub_edge = deleteat!(copy(indices),i)
+        if haskey(scaling_factors,sub_edge)
+            scaling = scaling_factors[sub_edge]
         else
-            mulitplicities = 1
+            scaling = multiplicity_factor(sub_edge)
+            scaling_factors[sub_edge] = scaling
+        end
+
+        contraction_vals[i] = ([indices[i]],multiplier*val*prod(x[sub_edge]))
+    end
+    return contraction_vals
+end
+
+
+function multiplicity_factor(indices::Array{Int,1})
+    multiplicities = Dict()
+    for index in indices
+        if index in multiplicities
+            multiplicities[index] += 1
+        else
+            multiplicities = 1
         end
     end
 
@@ -247,10 +247,8 @@ function contract_edge_k_1(e,x)
         i += 1
     end
 
-    scaling_factors = Dict()
-
-    contraction_vals = Dict()
-    for i in 1:order
-
-    end
+    return multinomial(final_counts...)
 end
+
+
+end #module end
