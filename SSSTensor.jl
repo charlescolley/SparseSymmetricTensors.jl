@@ -1,9 +1,9 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
-module SSSTensor
+module SSST
 using Combinatorics
 
-mutuable struct SSSTensor
+mutable struct SSSTensor
     edges::Dict{Array{Int,1},Number}
     cubical_dimension::Int
     SSSTensor(e,n) =
@@ -18,6 +18,26 @@ mutuable struct SSSTensor
     end
 end
 
+"""-----------------------------------------------------------------------------
+    order(A)
+
+This function returns the order of the tensor passed in.
+
+Input
+-----
+* A -(SSSTensor):
+    the tensor in question
+
+Outputs
+-------
+* order - (Int)
+    the order of the tensor
+-----------------------------------------------------------------------------"""
+function order(A::SSSTensor)
+    for (indices,_) in A.edges
+        return length(indices)
+    end
+end
 
 """-----------------------------------------------------------------------------
     reduce_edges(edges)
@@ -48,6 +68,23 @@ function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     end
     return edge_dict
 end
+
+#=
+"""-----------------------------------------------------------------------------
+   This function is syntactically similar to reduce_edges, but adds the reduced
+edges into a prexisting dictionary.
+-----------------------------------------------------------------------------"""
+function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
+                       edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+   for (indices, weight) in edges
+       if haskey(edge_dict,indices)
+           edge_dict[indices] += weight
+       else
+           edge_dict[indices] = weight
+       end
+   end
+end
+=#
 
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges,n)
@@ -96,14 +133,23 @@ Outputs
 -------
 * are_valid - (Bool):
     a bool indicating whether or not the edges all have positive indices and
-    the indices are sorted.
+    the indices are sorted, and have same number of indices.
 * max_index - (Int):
     an integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     max_index = -Inf
+    order = -1
     for (edge,_) in edges
+        if order == -1
+            order = length(edge)
+        else
+            if length(edge) != order
+                error("edge is wrong order")
+            end
+        end
+
         if !issorted(edge) || any(x -> x < 1,edge)
             return false, 0
         end
@@ -229,6 +275,32 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Nu
 end
 
 
+function contract_k_1(A::SSSTensor, x::Array{N,1}) where N <: Number
+
+    new_edges = Array{Tuple{Array{Int,1},N}}(undef,)
+    for edge in A.edges
+        reduce_edges!(new_edges, contract_edge_k_1(e,x))
+    end
+    return SSSTensor()
+end
+"""-----------------------------------------------------------------------------
+    multiplicity_factor(indices)
+
+This function takes in a list of indices and returns the multinomial coefficient
+computed by the frequency of the values in the indices. Works as a helper
+function for computing the number of non-zeros the edge represents in the
+vector contraction routines.
+
+Inputs
+------
+* indices -(Array{Int,1}):
+  the indices associated with the hyper edge
+
+Output
+------
+* multinomial_factor - (Int)
+   the number of non-zeros this edge represents in the original tensor.
+-----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
     multiplicities = Dict()
     for index in indices
