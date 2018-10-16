@@ -274,15 +274,44 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Nu
     return contraction_vals
 end
 
+"""-----------------------------------------------------------------------------
+    contract_k_1(A,x)
 
+This function contracts the tensor with the vector all the way until the result
+is a vector (the generalization of the matvec).
+
+Inputs
+------
+* A -(SSSTensor):
+  the tensor to contract.
+* x - (Array{Number,1}):
+  a vector of numbers to contract with.
+
+Outputs
+-------
+* y - (Array{Number,1}):
+  the output vector of Ax^{k-1}.
+-----------------------------------------------------------------------------"""
 function contract_k_1(A::SSSTensor, x::Array{N,1}) where N <: Number
 
-    new_edges = Array{Tuple{Array{Int,1},N}}(undef,)
+    order = order(A)
+    new_edges = Array{Tuple{Array{Int,1},N}}(undef,length(A.edges)*order)
+    y = zeros(A.cubical_dimension)
+    k = 0
+
+    #compute contractions
     for edge in A.edges
-        reduce_edges!(new_edges, contract_edge_k_1(e,x))
+        new_edges[k*order+1:(k+1)*order] = contract_edge_k_1(e,x)
     end
-    return SSSTensor()
+
+    #reduce edges and copy into new vector
+    edge_dict = reduce_edges(new_edges)
+    for ([i],v) in edge_dict
+        y[i] = v
+    end
+    return y
 end
+
 """-----------------------------------------------------------------------------
     multiplicity_factor(indices)
 
