@@ -48,8 +48,9 @@ together.
 
 Inputs:
 -------
-* edges -(Array{Tuple{Array{Int,1},Number},1}):
-  tuples which contain the sorted indices and an edge weight associated with it.
+* edges -(Array{{Array{Int,1},Number},1}):
+  2 Tuples which contain the sorted indices and an edge weight associated with
+  it.
 
 Outputs:
 --------
@@ -68,6 +69,19 @@ function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     end
     return edge_dict
 end
+
+function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
+                       edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+    for (indices, weight) in edges
+        if haskey(edge_dict,indices)
+            edge_dict[indices] += weight
+        else
+            edge_dict[indices] = weight
+        end
+    end
+    return edge_dict
+end
+
 
 #=
 """-----------------------------------------------------------------------------
@@ -96,7 +110,7 @@ dimensions.
 Inputs:
 -------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
-  An array which contains tuples of index arrays and paired edge values
+  An array which contains Tuples of index arrays and Tupleed edge values
   associated. The indices must be sorted
 * n  - (Int):
   An iteger indicating the desired dimension of the cubical tensor.
@@ -126,7 +140,7 @@ dimension n. Used as a helper function for the SSSTensor constructors.
 Inputs
 ------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
-  An array which contains tuples of index arrays and paired edge values
+  An array which contains Tuples of index arrays and paired edge values
   associated. The indices must be sorted
 
 Outputs
@@ -172,7 +186,7 @@ Inputs:
 -------
 * A - (SSSTensor)
 * edges - (Array{Tuple{Array{Int,1},Float},1})
-  an array of tuples which contain the indices in the first element, and the
+  an array of pairs which contain the indices in the first element, and the
   value in the second element. Note each edge's indices must be in range
 -----------------------------------------------------------------------------"""
 function add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
@@ -199,11 +213,11 @@ end
 This function returns a dense representation of the SSSTensor passed in.
 -----------------------------------------------------------------------------"""
 function dense(A::SSSTensor)
-    B = zeros(Tuple(repeat([A.cubical_dimension],A.order)))
+    B = zeros(Tuple(repeat([A.cubical_dimension],order(A))))
 
     for (indices,_) in A.edges
         for p in permutations(indices)
-            B[CartesianIndex(Tuple(p))] = A.edges[edge]
+            B[CartesianIndex(Tuple(p))] = A.edges[indices]
         end
     end
 
@@ -230,7 +244,7 @@ Inputs:
     along, must be greater than 0, and less than or equal to the cardinality
     of the edge.
 -----------------------------------------------------------------------------"""
-function contract_edge(e,x,k::Int)
+function contract_edge(e::Tuple{Array{Int,1},Float},x,k::Int)
     order = length(e)
     @assert 0 < k <= order
     error("unfinished")
@@ -257,19 +271,17 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Nu
     (indices,val) = e
     order = length(indices)
 
-    scaling_factors = Dict()
-    contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,order)
+#    scaling_factors = Dict()
+    visited_sub_indices = Set{Array{Int,1}}()
+    contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,0)
 
     for i in 1:order
         sub_edge = deleteat!(copy(indices),i)
-        if haskey(scaling_factors,sub_edge)
-            scaling = scaling_factors[sub_edge]
-        else
+        if !in(sub_edge,visited_sub_indices)#haskey(scaling_factors,sub_edge)
             scaling = multiplicity_factor(sub_edge)
-            scaling_factors[sub_edge] = scaling
+            push!(visited_sub_indices,sub_edge)
+            push!(contraction_vals,([indices[i]],scaling*val*prod(x[sub_edge])))
         end
-
-        contraction_vals[i] = ([indices[i]],multiplier*val*prod(x[sub_edge]))
     end
     return contraction_vals
 end
@@ -293,21 +305,22 @@ Outputs
   the output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
 function contract_k_1(A::SSSTensor, x::Array{N,1}) where N <: Number
+    @assert length(x) == A.cubical_dimension
 
-    order = order(A)
-    new_edges = Array{Tuple{Array{Int,1},N}}(undef,length(A.edges)*order)
+    order = SSST.order(A)
+    new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
     y = zeros(A.cubical_dimension)
-    k = 0
 
     #compute contractions
     for edge in A.edges
-        new_edges[k*order+1:(k+1)*order] = contract_edge_k_1(e,x)
+        contracted_edges = contract_edge_k_1(Tuple(edge),x)
+        push!(new_edges,contracted_edges...)
     end
-
     #reduce edges and copy into new vector
     edge_dict = reduce_edges(new_edges)
-    for ([i],v) in edge_dict
-        y[i] = v
+
+    for (i,v) in edge_dict
+        y[i[1]] = v
     end
     return y
 end
@@ -332,24 +345,56 @@ Output
 -----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
     multiplicities = Dict()
+
     for index in indices
-        if index in multiplicities
+        @show index
+        if haskey(multiplicities,index)
             multiplicities[index] += 1
         else
-            multiplicities = 1
+            multiplicities[index] = 1
         end
     end
 
     #copy into format that can be passed to multinomial
-    final_counts = zeros(order)
+    final_counts = zeros(Int,length(indices))
     i = 1
-    for (_,val) in mulitplicities
-        final_counts[i] = val
+    for (_,val) in multiplicities
+        final_counts[i] = Int(val)
         i += 1
     end
 
+    @show final_counts
     return multinomial(final_counts...)
 end
 
+"""-----------------------------------------------------------------------------
+    dense_contraction(A,x)
+
+This function computes a k-1 mode contraction for a dense kth order cubical
+tensor representation, with a vector of the appropriate dimension.
+
+Inputs
+------
+* A - (Array{Float64,k}):
+  a kth order cubical tensor stored as a multidimensional array.
+* x - (Array{Float,1}):
+  an array corresponding to the vector to contract A with.
+
+Outputs
+-------
+* y - (Array{Float64,1}):
+  the result of the k-1 mode contraction.
+-----------------------------------------------------------------------------"""
+@generated function dense_contraction(A::Array{T,k},x::Array{Float64,1}) where {T,k}
+    quote
+        y = zeros(size(x))
+
+        @nloops $k i A begin
+            xs = prod(x[collect(@ntuple $(k -1) j-> i_{j+1})])
+            y[i_1] += xs*(@nref $k A i)
+        end
+        return y
+    end
+end
 
 end #module end
