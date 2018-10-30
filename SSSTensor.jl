@@ -368,10 +368,13 @@ function multiplicity_factor(indices::Array{Int,1})
 end
 
 """-----------------------------------------------------------------------------
-    dense_contraction(A,x)
+    dense_contraction(A, x, m)
 
-This function computes a k-1 mode contraction for a dense kth order cubical
-tensor representation, with a vector of the appropriate dimension.
+This function computes a m mode contraction for a dense kth order cubical
+tensor representation, with a vector of the appropriate dimension. Note that
+this function uses Base.Cartesian, and thus in order to generate the loops with
+a variable used a trick which instantiates empty arrays of length 0, and passes
+them to another function which can pull the orders out to generate the loops.
 
 Inputs
 ------
@@ -379,22 +382,33 @@ Inputs
   a kth order cubical tensor stored as a multidimensional array.
 * x - (Array{Float,1}):
   an array corresponding to the vector to contract A with.
+* m - (Int)
+  an integer indicating the number of modes to contract along
 
 Outputs
 -------
-* y - (Array{Float64,1}):
-  the result of the k-1 mode contraction.
+* y - (Array{Float64,k-m}):
+  the result of the m mode contraction.
 -----------------------------------------------------------------------------"""
-@generated function dense_contraction(A::Array{T,k},x::Array{Float64,1}) where {T,k}
+function dense_contraction(A::Array{N,k}, x::Array{Float64,1},m::Int64) where {N <: Number,k}
+
+    return dense_contraction(A,x,zeros(repeat([0],m)...),
+                             zeros(repeat([0],k-m)...))
+end
+
+@generated function dense_contraction(A::Array{N,k}, x::Array{Float64,1},
+                                      B::Array{N,m}, C::Array{N,p}) where {N<:Number,k,m,p}
     quote
-        y = zeros(size(x))
+        n = size(A)[1]
+        y = zeros(repeat([n],$k - $m)...)
 
         @nloops $k i A begin
-            xs = prod(x[collect(@ntuple $(k -1) j-> i_{j+1})])
-            y[i_1] += xs*(@nref $k A i)
+            xs = prod(x[collect(@ntuple $m j-> i_{j+1})])
+            (@nref $p y i) += xs*(@nref $k A i)
         end
         return y
     end
 end
+
 
 end #module end
