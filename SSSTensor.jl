@@ -2,6 +2,7 @@
 ------------------------------------------------------------------------------=#
 module SSST
 using Combinatorics
+using Base.Cartesian
 
 mutable struct SSSTensor
     edges::Dict{Array{Int,1},Number}
@@ -70,6 +71,10 @@ function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     return edge_dict
 end
 
+function reduce_edges(edges::Dict{Array{Int,1},N}) where N <: Number
+    return edges
+end
+
 function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
                        edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     for (indices, weight) in edges
@@ -83,22 +88,6 @@ function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
 end
 
 
-#=
-"""-----------------------------------------------------------------------------
-   This function is syntactically similar to reduce_edges, but adds the reduced
-edges into a prexisting dictionary.
------------------------------------------------------------------------------"""
-function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
-                       edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
-   for (indices, weight) in edges
-       if haskey(edge_dict,indices)
-           edge_dict[indices] += weight
-       else
-           edge_dict[indices] = weight
-       end
-   end
-end
-=#
 
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges,n)
@@ -121,7 +110,8 @@ is_valid - (Bool)
   An integer indicating whether or not the edges are appropriate for the tensor
   specified.
 -----------------------------------------------------------------------------"""
-function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1},n::Int) where N <: Number
+function SSSTensor_verifier(edges::Union{Array{Tuple{Array{Int,1},N},1},Dict{Array{Int64,1},N}}
+                            ,n::Int) where N <: Number
 
     indices_are_valid, max_index = SSSTensor_verifier(edges)
 
@@ -133,7 +123,53 @@ end
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
 
-This function takes in a list of edges and a cubical dimension and checks
+This function takes in a list of edges and checks whether or not the edges are
+appropriate for a super symmetric tensor. Finds the largest index and over all
+the edges and sets that as the cubical dimension of the tensor. Used as a helper
+ function for the SSSTensor constructors.
+
+Inputs
+------
+* edges - (Dict{Array{Int64,1},Number}):
+  An array which contains Tuples of index arrays and paired edge values
+  associated. The indices must be sorted
+
+Outputs
+-------
+* are_valid - (Bool):
+    a bool indicating whether or not the edges all have positive indices and
+    the indices are sorted, and have same number of indices.
+* max_index - (Int):
+    an integer indicating the maximum index, returns 0 if an edge is found not
+    to be sorted.
+-----------------------------------------------------------------------------"""
+function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
+    max_index = -Inf
+    order = -1
+    for (indices,_) in edges
+        if order == -1
+            order = length(indices)
+        else
+            if length(indices) != order
+                error("edge is wrong order")
+            end
+        end
+
+        if !issorted(indices) || any(x -> x < 1,indices)
+            return false, 0
+        end
+        if indices[end] > max_index
+            max_index = indices[end]
+        end
+    end
+
+    return true, max_index
+end
+
+"""-----------------------------------------------------------------------------
+    SSSTensor_verifier(edges)
+
+This function takes in a dictionary of edges and a cubical dimension and checks
 whether or not the edges are appropriate for a super symmetric tensor with
 dimension n. Used as a helper function for the SSSTensor constructors.
 
@@ -213,7 +249,7 @@ end
 This function returns a dense representation of the SSSTensor passed in.
 -----------------------------------------------------------------------------"""
 function dense(A::SSSTensor)
-    B = zeros(Tuple(repeat([A.cubical_dimension],order(A))))
+    B = zeros(eltype(A.edges.vals),Tuple(repeat([A.cubical_dimension],order(A))))
 
     for (indices,_) in A.edges
         for p in permutations(indices)
@@ -244,10 +280,30 @@ Inputs:
     along, must be greater than 0, and less than or equal to the cardinality
     of the edge.
 -----------------------------------------------------------------------------"""
-function contract_edge(e::Tuple{Array{Int,1},Float},x,k::Int)
+function contract_edge(e::Tuple{Array{Int,1},M},x::Array{N,1},k::Int) where {N <: Number, M<:Number}
     order = length(e)
-    @assert 0 < k <= order
-    error("unfinished")
+
+    (indices,val) = e
+    condensed_dict = Dict{Array{Int,1},N}()
+    visited_sub_indices = Dict{Array{Int,1},Dict{Array{Int,1},N}}()
+
+    for i in 1:length(indices)
+        sub_edge = deleteat!(copy(indices),i)
+        if !haskey(visited_sub_indices,sub_edge)
+            if k == 1
+                condensed_dict[sub_edge] = val*x[indices[i]]
+            else
+                visited_sub_indices[sub_edge] = contract_edge((sub_edge,val*x[indices[i]]),x,k-1)
+            end
+        end
+    end
+
+    if k != 1
+        for (_,sub_dict) in visited_sub_indices
+            reduce_dictionaries!(condensed_dict,sub_dict)
+        end
+    end
+    return condensed_dict
 end
 
 
@@ -271,7 +327,6 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Nu
     (indices,val) = e
     order = length(indices)
 
-#    scaling_factors = Dict()
     visited_sub_indices = Set{Array{Int,1}}()
     contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,0)
 
@@ -287,10 +342,28 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Nu
 end
 
 """-----------------------------------------------------------------------------
-    contract_k_1(A,x)
+    reduce_dictionaries!(D1,D2)
 
-This function contracts the tensor with the vector all the way until the result
-is a vector (the generalization of the matvec).
+This function takes in two dictionaries assumed to have the same value type and
+reduces the contents of the second dicionary into the first. When two keys exist
+in both dictionaries, their values are summed together.
+-----------------------------------------------------------------------------"""
+function reduce_dictionaries!(D1::Dict{Array{Int,1},N},
+                              D2::Dict{Array{Int,1},N}) where N <: Number
+
+    for (key,val) in D2
+        if haskey(D1,key)
+            D1[key] += val
+        else
+            D1[key] = val
+        end
+    end
+end
+
+"""-----------------------------------------------------------------------------
+    contract(A,x,m)
+
+This function contracts the tensor along the
 
 Inputs
 ------
@@ -298,16 +371,63 @@ Inputs
   the tensor to contract.
 * x - (Array{Number,1}):
   a vector of numbers to contract with.
+* k - (Int)
+  the number of modes to contract A with x along.
+Outputs
+-------
+* y - (Array{Number,1}):
+  the output vector of Ax^k.
+-----------------------------------------------------------------------------"""
+function contract(A::SSSTensor, x::Array{N,1},k::Int) where {N <: Number}
+    @assert length(x) == A.cubical_dimension
+    order = SSST.order(A)
+    @assert 0 < k <= order
 
+    new_edges = Dict{Array{Int,1},N}()
+    #compute contractions
+    for edge in A.edges
+        new_e = contract_edge(Tuple(edge),x,k)
+        reduce_dictionaries!(new_edges,new_e)
+    end
+
+    if order == k
+        for (_,v) in new_edges
+            return v
+        end
+    elseif order - k == 1
+        y = zeros(length(x))
+        for (e,v) in new_edges
+            y[e[1]] = v
+        end
+        return y
+    else
+        return SSSTensor(new_edges)
+    end
+end
+
+
+"""-----------------------------------------------------------------------------
+    contract_k_1(A,x)
+
+This function contracts the tensor along k-1 modes to produce a vector. This
+will produce the same result as contract(A,x,k-1), but runs in a much faster
+time.
+
+Inputs
+------
+* A -(SSSTensor):
+  the tensor to contract.
+* x - (Array{Number,1}):
+  a vector of numbers to contract with.
 Outputs
 -------
 * y - (Array{Number,1}):
   the output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
-function contract_k_1(A::SSSTensor, x::Array{N,1}) where N <: Number
+function contract_k_1(A::SSSTensor, x::Array{M,1}) where {N <: Number, M <:Number}
     @assert length(x) == A.cubical_dimension
-
     order = SSST.order(A)
+
     new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
     y = zeros(A.cubical_dimension)
 
@@ -390,25 +510,46 @@ Outputs
 * y - (Array{Float64,k-m}):
   the result of the m mode contraction.
 -----------------------------------------------------------------------------"""
-function dense_contraction(A::Array{N,k}, x::Array{Float64,1},m::Int64) where {N <: Number,k}
+function dense_contraction(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
 
-    return dense_contraction(A,x,zeros(repeat([0],m)...),
-                             zeros(repeat([0],k-m)...))
+    return dense_contraction(A,x,zeros(Int,repeat([0],m)...),
+                             zeros(Int,repeat([0],k-m)...))
 end
 
-@generated function dense_contraction(A::Array{N,k}, x::Array{Float64,1},
-                                      B::Array{N,m}, C::Array{N,p}) where {N<:Number,k,m,p}
+@generated function dense_contraction(A::Array{N,k}, x::Array{M,1},
+                                      B::Array{Int,m}, C::Array{Int,p}) where
+                                      {M<:Number,N<:Number,k,m,p}
     quote
         n = size(A)[1]
-        y = zeros(repeat([n],$k - $m)...)
+        @assert n == length(x)
+        @assert $k >= m
+
+        y = zeros(N,repeat([n],$k - $m)...)
 
         @nloops $k i A begin
-            xs = prod(x[collect(@ntuple $m j-> i_{j+1})])
+            xs = prod(x[collect(@ntuple $m j-> i_{j+$p})])
             (@nref $p y i) += xs*(@nref $k A i)
         end
         return y
     end
 end
 
+@generated function find_nnz(A::Array{N,k}) where {N<:Number,k}
+    quote
+        n = size(A)[1]
+        y = Array{Tuple{Array{Int,1},N},1}(undef,n^k)
+        nnz = 1
+
+        @nloops $k i A begin
+            val = @nref $k A i
+            if val != 0.0
+                y[nnz] = (collect(@ntuple $k i),val)
+                nnz += 1
+            end
+        end
+        nnz -= 1 #take care of overcount
+        return y[1:nnz], nnz
+    end
+end
 
 end #module end
