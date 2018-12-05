@@ -3,6 +3,9 @@
 module SSST
 using Combinatorics
 using Base.Cartesian
+using Printf
+
+
 
 mutable struct SSSTensor
     edges::Dict{Array{Int,1},Number}
@@ -17,6 +20,61 @@ mutable struct SSSTensor
             error("invalid indices")
         end
     end
+
+    function SSSTensor(A::Array{N,k}) where {N <: Number,k}
+        edge_dict, n = SSSTensor_from_Array(A,zeros(Int,repeat([0],k-1)...))
+        new(edge_dict,n)
+    end
+
+end
+
+
+
+@generated function SSSTensor_from_Array(A::Array{N,k},B::Array{Int,p}) where {N<:Number,k,p}
+    quote
+
+        n = size(A)[1]
+    #    @assert all((x)->x == n, size(A)) #cubical tensor
+
+        y = Dict{Array{Int64,1},N}()
+        c = $k
+        @show c
+        string_as_varname_function(@sprintf("i_%d",c+1),n)
+        @nloops $k i d-> 1:i_{d+1} begin
+            indices = @ntuple $k i
+            add_perm!(y,A,$k,indices)
+        end
+        return y,n
+    end
+end
+
+"""
+helper function for testing and adding in the permutation as an edge into the
+dictionary used to build the symmetric tensor from the
+
+"""
+function add_perm!(edges,A,order,indices)
+    val = A[indices...]
+    sum = 0.0
+
+    tol = 1e-12
+    for p in permutations(indices)
+        sum += A[p...]
+        if abs(A[p...] - val) > tol
+            error("tensor is not symmetric")
+            #would be good to print the permutation which raises error
+        end
+    end
+    #add in the average of the values of the permutations of the tensor
+    if sum > 0.0
+        edges[collect(indices)] = sum/multiplicity_factor(collect(indices))
+    end
+end
+
+#helper function which creates a new variable, bounds the last loop
+function string_as_varname_function(s::AbstractString, v::Any)
+   s = Symbol(s)
+   @eval (($s) = ($v))
 end
 
 """-----------------------------------------------------------------------------
@@ -38,6 +96,42 @@ function order(A::SSSTensor)
     for (indices,_) in A.edges
         return length(indices)
     end
+end
+
+
+"""-----------------------------------------------------------------------------
+    matrix_to_dictionary()
+
+This function takes in a matrix containing the indices of hyperedges as columns
+ and converts it into a dictionary linking the sorted indices to values. If no
+ values are passed in, then the weights of each hyperedge are assumed to be 1.0.
+
+Inputs
+------
+A - (k x n Array{Int,2}):
+  each column corresponds to the indices of a hyper edges.
+
+Outputs
+-------
+D - (Dictionary{Array{Int,1},Float64}):
+  The dictionary used to create the super symmetric tensor.
+
+Note
+----
+Add in weights to link to hyper edges.
+-----------------------------------------------------------------------------"""
+function matrix_to_dictionary(A::Array{Int,2})
+    D = Dict{Array{Int,1},Float64}()
+    _,n = size(A)
+
+    for j in 1:n
+        sorted_indices = sort(A[:,j])
+        if !haskey(D,sorted_indices)
+            D[sorted_indices] = 1.0
+        end
+    end
+
+    return D
 end
 
 """-----------------------------------------------------------------------------
@@ -86,7 +180,6 @@ function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
     end
     return edge_dict
 end
-
 
 
 """-----------------------------------------------------------------------------
@@ -165,6 +258,7 @@ function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
 
     return true, max_index
 end
+
 
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
@@ -424,7 +518,7 @@ Outputs
 * y - (Array{Number,1}):
   the output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
-function contract_k_1(A::SSSTensor, x::Array{M,1}) where {N <: Number, M <:Number}
+function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
     @assert length(x) == A.cubical_dimension
     order = SSST.order(A)
 
@@ -455,6 +549,8 @@ vector contraction routines.
 
 Inputs
 ------
+
+
 * indices -(Array{Int,1}):
   the indices associated with the hyper edge
 
@@ -462,12 +558,16 @@ Output
 ------
 * multinomial_factor - (Int)
    the number of non-zeros this edge represents in the original tensor.
+
+Note
+----
+Change to include tuples too.
 -----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
     multiplicities = Dict()
 
     for index in indices
-        @show index
+
         if haskey(multiplicities,index)
             multiplicities[index] += 1
         else
@@ -483,9 +583,9 @@ function multiplicity_factor(indices::Array{Int,1})
         i += 1
     end
 
-    @show final_counts
     return multinomial(final_counts...)
 end
+
 
 """-----------------------------------------------------------------------------
     dense_contraction(A, x, m)
@@ -534,6 +634,12 @@ end
     end
 end
 
+"""-----------------------------------------------------------------------------
+    find_nnz(A)
+
+Finds the non-zeros in a k-dimensional array and returns the list of the indices
+associated along with a count of the non-zeros.
+-----------------------------------------------------------------------------"""
 @generated function find_nnz(A::Array{N,k}) where {N<:Number,k}
     quote
         n = size(A)[1]
@@ -551,5 +657,7 @@ end
         return y[1:nnz], nnz
     end
 end
+
+
 
 end #module end
