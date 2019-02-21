@@ -85,17 +85,17 @@ end
 """-----------------------------------------------------------------------------
     order(A)
 
-This function returns the order of the tensor passed in.
+  This function returns the order of the tensor passed in.
 
-Input
------
+Input:
+------
 * A -(SSSTensor):
-    the tensor in question
+    The tensor in question.
 
-Outputs
+Output:
 -------
 * order - (Int)
-    the order of the tensor
+    The order of the tensor.
 -----------------------------------------------------------------------------"""
 function order(A::SSSTensor)
     for (indices,_) in A.edges
@@ -107,22 +107,23 @@ end
 """-----------------------------------------------------------------------------
     matrix_to_dictionary()
 
-This function takes in a matrix containing the indices of hyperedges as columns
- and converts it into a dictionary linking the sorted indices to values. If no
- values are passed in, then the weights of each hyperedge are assumed to be 1.0.
+  This function takes in a matrix containing the indices of hyperedges as
+columns and converts it into a dictionary linking the sorted indices to values.
+If no values are passed in, then the weights of each hyperedge are assumed to be
+1.0.
 
-Inputs
-------
-A - (k x n Array{Int,2}):
-  each column corresponds to the indices of a hyper edges.
-
-Outputs
+Inputs:
 -------
-D - (Dictionary{Array{Int,1},Float64}):
-  The dictionary used to create the super symmetric tensor.
+* A - (k x n Array{Int,2}):
+    Each column corresponds to the indices of a hyper edges.
 
-Note
-----
+Output:
+-------
+* D - (Dictionary{Array{Int,1},Float64}):
+    The dictionary used to create the super symmetric tensor.
+
+Note:
+-----
 Add in weights to link to hyper edges.
 -----------------------------------------------------------------------------"""
 function matrix_to_dictionary(A::Array{Int,2})
@@ -142,20 +143,20 @@ end
 """-----------------------------------------------------------------------------
     reduce_edges(edges)
 
-This function takes in the edges to passed to create a new SSSTensor and reduces
+  This function takes in the edges to passed to create a new SSSTensor and reduces
 the list into a dictionary where the edges that have the same edges are added
 together.
 
 Inputs:
 -------
 * edges -(Array{{Array{Int,1},Number},1}):
-  2 Tuples which contain the sorted indices and an edge weight associated with
-  it.
+    2 Tuples which contain the sorted indices and an edge weight associated with
+    it.
 
-Outputs:
---------
+Output:
+-------
 * edge_dict - (Dict{Array{Int,1},Number}):
-  The resulting dictionary which has the edges aggregated together.
+    The resulting dictionary which has the edges aggregated together.
 -----------------------------------------------------------------------------"""
 function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     edge_dict = Dict()
@@ -190,7 +191,7 @@ end
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges,n)
 
-This function takes a list of edges and a cubical dimension and checks whether
+  This function takes a list of edges and a cubical dimension and checks whether
 or not the edges are appropriate for a a super symmetric cubical tensor of n
 dimensions.
 
@@ -198,15 +199,15 @@ Inputs:
 -------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
   An array which contains Tuples of index arrays and Tupleed edge values
-  associated. The indices must be sorted
+  associated. The indices must be sorted.
 * n  - (Int):
   An iteger indicating the desired dimension of the cubical tensor.
 
 Outputs:
 --------
-is_valid - (Bool)
-  An integer indicating whether or not the edges are appropriate for the tensor
-  specified.
+* is_valid - (Bool)
+    An integer indicating whether or not the edges are appropriate for the
+    tensor specified.
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Union{Array{Tuple{Array{Int,1},N},1},Dict{Array{Int64,1},N}}
                             ,n::Int) where N <: Number
@@ -221,24 +222,24 @@ end
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
 
-This function takes in a list of edges and checks whether or not the edges are
+  This function takes in a list of edges and checks whether or not the edges are
 appropriate for a super symmetric tensor. Finds the largest index and over all
 the edges and sets that as the cubical dimension of the tensor. Used as a helper
- function for the SSSTensor constructors.
+function for the SSSTensor constructors.
 
-Inputs
-------
+Inputs:
+-------
 * edges - (Dict{Array{Int64,1},Number}):
-  An array which contains Tuples of index arrays and paired edge values
-  associated. The indices must be sorted
+    An array which contains Tuples of index arrays and paired edge values
+    associated. The indices must be sorted.
 
-Outputs
+Output:
 -------
 * are_valid - (Bool):
-    a bool indicating whether or not the edges all have positive indices and
+    A bool indicating whether or not the edges all have positive indices and
     the indices are sorted, and have same number of indices.
 * max_index - (Int):
-    an integer indicating the maximum index, returns 0 if an edge is found not
+    An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
@@ -268,23 +269,23 @@ end
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
 
-This function takes in a dictionary of edges and a cubical dimension and checks
+  This function takes in a dictionary of edges and a cubical dimension and checks
 whether or not the edges are appropriate for a super symmetric tensor with
 dimension n. Used as a helper function for the SSSTensor constructors.
 
-Inputs
-------
+Inputs:
+-------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
-  An array which contains Tuples of index arrays and paired edge values
-  associated. The indices must be sorted
+    An array which contains Tuples of index arrays and paired edge values
+    associated. The indices must be sorted.
 
-Outputs
+Output:
 -------
 * are_valid - (Bool):
-    a bool indicating whether or not the edges all have positive indices and
+    A bool indicating whether or not the edges all have positive indices and
     the indices are sorted, and have same number of indices.
 * max_index - (Int):
-    an integer indicating the maximum index, returns 0 if an edge is found not
+    An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
@@ -314,15 +315,16 @@ end
 """-----------------------------------------------------------------------------
     add_edges!(A,edges)
 
-This function takes in a list of edges and adds them into the SSSTensor. If an
+  This function takes in a list of edges and adds them into the SSSTensor. If an
 edge is already present in the tensor, and the value is added in at that index.
 
 Inputs:
 -------
 * A - (SSSTensor)
+    The tensor to add hyper edges to.
 * edges - (Array{Tuple{Array{Int,1},Float},1})
-  an array of pairs which contain the indices in the first element, and the
-  value in the second element. Note each edge's indices must be in range
+    An array of pairs which contain the indices in the first element, and the
+    value in the second element. Note each edge's indices must be in range.
 -----------------------------------------------------------------------------"""
 function add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     #check edges' validity
@@ -345,7 +347,17 @@ end
 """-----------------------------------------------------------------------------
     dense(A)
 
-This function returns a dense representation of the SSSTensor passed in.
+  This function returns a dense representation of the SSSTensor passed in.
+
+Inputs:
+-------
+* A - (SSSTensor)
+    The sparse tensor to be converted.
+
+Output:
+-------
+* B - (Array{Number,k})
+    The corresponding dense tensor representation of A.
 -----------------------------------------------------------------------------"""
 function dense(A::SSSTensor)
     B = zeros(eltype(A.edges.vals),Tuple(repeat([A.cubical_dimension],order(A))))
@@ -369,15 +381,21 @@ the vector x.
 Inputs:
 -------
 * e -(Tuple(Array{Int,1},Float)):
-    a list of indices paired with an edge value. Note that the list of indices
-    corresponds to multiple sets of indices because we consider all
+    A list of indices paired with an edge value. Note that the list of indices
+    corresponds to multiple sets of indices because we consider all.
     permutations.
 * x -(Array{Float,1})
     The vector to contract with.
 * k - (Int):
-    a positive integer which corresponds to the number of modes to contract
+    A positive integer which corresponds to the number of modes to contract
     along, must be greater than 0, and less than or equal to the cardinality
     of the edge.
+
+Output:
+-------
+* condensed_dict - (Dict{Array{Int,1},Number}
+    The hyper edges in the lower order tensor which are formed by contracting
+    the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
 function contract_edge(e::Tuple{Array{Int,1},M},x::Array{N,1},k::Int) where {N <: Number, M<:Number}
     order = length(e)
@@ -421,6 +439,12 @@ Inputs:
     permutations.
 * x -(Array{Number,1})
     The vector of the same dimenionality of the tensor, to contract with.
+
+Output:
+-------
+* contraction_vals - (Array{Tuple{Array{Int,1},Number}})
+    The hyper edges in the lower order tensor which are formed by contracting
+    the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
 function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Number
     (indices,val) = e
@@ -460,22 +484,77 @@ function reduce_dictionaries!(D1::Dict{Array{Int,1},N},
 end
 
 """-----------------------------------------------------------------------------
+    contract(A, x, m)
+
+  This function computes a m mode contraction for a dense kth order cubical
+tensor representation, with a vector of the appropriate dimension. Note that
+this function uses Base.Cartesian, and thus in order to generate the loops with
+a variable used a trick which instantiates empty arrays of length 0, and passes
+them to another function which can pull the orders out to generate the loops.
+
+Inputs:
+-------
+* A - (Array{Float64,k}):
+    A kth order cubical tensor stored as a multidimensional array.
+* x - (Array{Float,1}):
+    An array corresponding to the vector to contract A with.
+* m - (Int)
+    An integer indicating the number of modes to contract along.
+
+Output:
+-------
+* y - (Array{Float64,k-m}):
+    The result of the m mode contraction.
+-----------------------------------------------------------------------------"""
+function contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
+
+    return dense_contract(A,x,zeros(Int,repeat([0],m)...),
+	                      zeros(Int,repeat([0],k-m)...))
+end
+
+@generated function dense_contract(A::Array{N,k}, x::Array{M,1},
+                                   B::Array{Int,m}, C::Array{Int,p}) where
+								   {M<:Number,N<:Number,k,m,p}
+    quote
+        n = size(A)[1]
+        @assert n == length(x)
+        @assert $k >= m
+
+        y = zeros(N,repeat([n],$k - $m)...)
+
+        @nloops $k i A begin
+            xs = prod(x[collect(@ntuple $m j-> i_{j+$p})])
+            (@nref $p y i) += xs*(@nref $k A i)
+        end
+	if $k == m
+	  for val in y
+	    return val
+	  end
+	else
+          return y
+        end
+      end
+end
+
+
+"""-----------------------------------------------------------------------------
     contract(A,x,m)
 
-This function contracts the tensor along the
+This function contracts the tensor along m modes
 
 Inputs
 ------
 * A -(SSSTensor):
-  the tensor to contract.
+    The tensor to contract.
 * x - (Array{Number,1}):
-  a vector of numbers to contract with.
+    A vector of numbers to contract with.
 * k - (Int)
-  the number of modes to contract A with x along.
+    The number of modes to contract A with x along.
+
 Outputs
 -------
 * y - (Array{Number,1}):
-  the output vector of Ax^k.
+    The output vector of Ax^k.
 -----------------------------------------------------------------------------"""
 function contract(A::SSSTensor, x::Array{N,1},k::Int) where {N <: Number}
     @assert length(x) == A.cubical_dimension
@@ -532,13 +611,13 @@ time.
 Inputs
 ------
 * A -(SSSTensor):
-  the tensor to contract.
+    The tensor to contract.
 * x - (Array{Number,1}):
-  a vector of numbers to contract with.
+    A vector of numbers to contract with.
 Outputs
 -------
 * y - (Array{Number,1}):
-  the output vector of Ax^{k-1}.
+    The output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
 function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
     @assert length(x) == A.cubical_dimension
@@ -564,22 +643,20 @@ end
 """-----------------------------------------------------------------------------
     multiplicity_factor(indices)
 
-This function takes in a list of indices and returns the multinomial coefficient
-computed by the frequency of the values in the indices. Works as a helper
-function for computing the number of non-zeros the edge represents in the
+  This function takes in a list of indices and returns the multinomial
+coefficient computed by the frequency of the values in the indices. Works as a
+helper function for computing the number of non-zeros the edge represents in the
 vector contraction routines.
 
-Inputs
-------
-
-
+Inputs:
+-------
 * indices -(Array{Int,1}):
-  the indices associated with the hyper edge
+  The indices associated with the hyper edge.
 
-Output
-------
+Output:
+-------
 * multinomial_factor - (Int)
-   the number of non-zeros this edge represents in the original tensor.
+   The number of non-zeros this edge represents in the original tensor.
 
 Note
 ----
@@ -610,63 +687,10 @@ end
 
 
 """-----------------------------------------------------------------------------
-    dense_contract(A, x, m)
-
-This function computes a m mode contraction for a dense kth order cubical
-tensor representation, with a vector of the appropriate dimension. Note that
-this function uses Base.Cartesian, and thus in order to generate the loops with
-a variable used a trick which instantiates empty arrays of length 0, and passes
-them to another function which can pull the orders out to generate the loops.
-
-Inputs
-------
-* A - (Array{Float64,k}):
-  a kth order cubical tensor stored as a multidimensional array.
-* x - (Array{Float,1}):
-  an array corresponding to the vector to contract A with.
-* m - (Int)
-  an integer indicating the number of modes to contract along
-
-Output
--------
-* y - (Array{Float64,k-m}):
-  the result of the m mode contraction.
------------------------------------------------------------------------------"""
-function dense_contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
-
-    return dense_contract(A,x,zeros(Int,repeat([0],m)...),
-	                      zeros(Int,repeat([0],k-m)...))
-end
-
-@generated function dense_contract(A::Array{N,k}, x::Array{M,1},
-                                   B::Array{Int,m}, C::Array{Int,p}) where
-								   {M<:Number,N<:Number,k,m,p}
-    quote
-        n = size(A)[1]
-        @assert n == length(x)
-        @assert $k >= m
-
-        y = zeros(N,repeat([n],$k - $m)...)
-
-        @nloops $k i A begin
-            xs = prod(x[collect(@ntuple $m j-> i_{j+$p})])
-            (@nref $p y i) += xs*(@nref $k A i)
-        end
-	if $k == m
-	  for val in y
-	    return val
-	  end
-	else
-          return y
-        end
-      end
-end
-
-"""-----------------------------------------------------------------------------
     find_nnz(A)
 
-Finds the non-zeros in a k-dimensional array and returns the list of the indices
-associated along with a count of the non-zeros.
+  Finds the non-zeros in a k-dimensional array and returns the list of the
+indices associated along with a count of the non-zeros.
 -----------------------------------------------------------------------------"""
 @generated function find_nnz(A::Array{N,k}) where {N<:Number,k}
     quote
@@ -689,33 +713,35 @@ end
 """-----------------------------------------------------------------------------
     Dynamical_System_Solver(A,m=1)
 
-    This function takes in a sparse symmetric tensor and computes the tensor
-  eigenvector by solving the dynamical system formed by contracting the tensor
-  A into a vector, and then computing the mth largest eigenvector of the matrix
-  Ax^{k-1}. With this we form the dynamical system
-                        dxdt = :Lambda_m(Ax^{k+1})
-  which we solve with a forward Euler scheme with a step size of h, starting at
-  the point x0. We solve this until the norm of dxdt reaches a specified
-  tolerance
+  This function takes in a sparse symmetric tensor and computes the tensor
+eigenvector by solving the dynamical system formed by contracting the tensor
+A into a vector, and then computing the mth largest eigenvector of the matrix
+Ax^{k-1}. With this we form the dynamical system
+					dxdt = :Lambda_m(Ax^{k+1})
+which we solve with a forward Euler scheme with a step size of h, starting at
+the point x0. We solve this until the norm of dxdt reaches a specified
+tolerance.
 
-  Inputs:
-  -------
-  A - (SSSTensor)
-    The symmetric tensor to compute the eigenvector of.
-  x0 - (Array{Number,1})
+Inputs:
+-------
+* A - (SSSTensor or Array{Number,k})
+    The symmetric tensor to compute the eigenvector of. Functions are
+    overloaded to handle appropriate type.
+* x0 - (Array{Number,1})
     The initial starting point for solving the dynamical system.
-  h - (Float64)
+* h - (Float64)
     The step size for running the forward Euler scheme.
-  tol - (Float64)
+* tol - (Float64)
     The tolerance to solve the dynamical system up to, stops when
     norm(dxdt) < tol.
-  m - (Int)
+* m - (Int)
     The eigenvector to find when computing the dynamical system. Default is the
     largest eigenvector of the matrix.
-  Output:
-  -------
-  x - (Array{Number,1}
-    the resulting eigenvector computed by the dynamical system method.
+
+Output:
+-------
+* x - (Array{Number,1}
+    The resulting eigenvector computed by the dynamical system method.
 -----------------------------------------------------------------------------"""
 function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
                                  tol::Float64,m::Int64 = 1) where N <: Number
