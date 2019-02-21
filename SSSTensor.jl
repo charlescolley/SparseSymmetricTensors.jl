@@ -427,7 +427,7 @@ end
 """-----------------------------------------------------------------------------
     contract_edge_k_1(e,x)
 
-This function takes in an edge of a super symmetric tensor and computes the
+  This function takes in an edge of a super symmetric tensor and computes the
 resulting edges which result from contracting the the edge along k-1 modes with
 the vector x, where k is the order of the hyper edge.
 
@@ -483,29 +483,77 @@ function reduce_dictionaries!(D1::Dict{Array{Int,1},N},
     end
 end
 
+
 """-----------------------------------------------------------------------------
-    contract(A, x, m)
+    contract(A,x,m)
 
-  This function computes a m mode contraction for a dense kth order cubical
-tensor representation, with a vector of the appropriate dimension. Note that
-this function uses Base.Cartesian, and thus in order to generate the loops with
-a variable used a trick which instantiates empty arrays of length 0, and passes
-them to another function which can pull the orders out to generate the loops.
+  This function contracts the tensor along m modes. Note that when the tensor is
+dense this function uses Base.Cartesian, and thus in order to generate the loops
+with a variable used a trick which instantiates empty arrays of length 0, and
+passes them to another function which can pull the orders out to generate the
+loops.
 
-Inputs:
--------
-* A - (Array{Float64,k}):
-    A kth order cubical tensor stored as a multidimensional array.
-* x - (Array{Float,1}):
-    An array corresponding to the vector to contract A with.
+Inputs
+------
+* A -(SSSTensor or Array{Number,k}):
+    The tensor to contract.
+* x - (Array{Number,1}):
+    A vector of numbers to contract with.
 * m - (Int)
-    An integer indicating the number of modes to contract along.
+    The number of modes to contract A with x along.
 
-Output:
+Outputs
 -------
-* y - (Array{Float64,k-m}):
-    The result of the m mode contraction.
+* y - (SSSTensor or CSC Matrix or Array{Float64,k-m}):
+    The output vector of Ax^m. THe output will be sparse if the input tensor is
+    sparse, and dense otherwise. When the output is second order, and A is
+    sparse, then the output will be a sparse matrix.
 -----------------------------------------------------------------------------"""
+function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: Number}
+    @assert length(x) == A.cubical_dimension
+    order = SSST.order(A)
+    @assert 0 < m <= order
+
+    new_edges = Dict{Array{Int,1},N}()
+    #compute contractions
+    for edge in A.edges
+        new_e = contract_edge(Tuple(edge),x,m)
+        reduce_dictionaries!(new_edges,new_e)
+    end
+
+    if order == m
+        for (_,v) in new_edges
+            return v
+        end
+    elseif order - m == 1
+        y = zeros(length(x))
+        for (e,v) in new_edges
+            y[e[1]] = v
+        end
+        return y
+    elseif order - m == 2
+	  index = 1
+	  nnzs = length(new_edges)
+	  I = zeros(Int64,2*nnzs)
+	  J = zeros(Int64,2*nnzs)
+	  V = zeros(N,2*nnzs)
+
+	  for (e,val) in new_edges
+	    I[index] = e[1]
+		J[index] = e[2]
+		I[index+1] = e[2]
+		J[index+1] = e[1]
+		V[index] = val
+		V[index+1] = val
+		index += 2
+	  end
+	  return sparse(I,J,V)
+	else
+        return SSSTensor(new_edges)
+    end
+end
+
+#Dense Case
 function contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
 
     return dense_contract(A,x,zeros(Int,repeat([0],m)...),
@@ -535,71 +583,6 @@ end
         end
       end
 end
-
-
-"""-----------------------------------------------------------------------------
-    contract(A,x,m)
-
-This function contracts the tensor along m modes
-
-Inputs
-------
-* A -(SSSTensor):
-    The tensor to contract.
-* x - (Array{Number,1}):
-    A vector of numbers to contract with.
-* k - (Int)
-    The number of modes to contract A with x along.
-
-Outputs
--------
-* y - (Array{Number,1}):
-    The output vector of Ax^k.
------------------------------------------------------------------------------"""
-function contract(A::SSSTensor, x::Array{N,1},k::Int) where {N <: Number}
-    @assert length(x) == A.cubical_dimension
-    order = SSST.order(A)
-    @assert 0 < k <= order
-
-    new_edges = Dict{Array{Int,1},N}()
-    #compute contractions
-    for edge in A.edges
-        new_e = contract_edge(Tuple(edge),x,k)
-        reduce_dictionaries!(new_edges,new_e)
-    end
-
-    if order == k
-        for (_,v) in new_edges
-            return v
-        end
-    elseif order - k == 1
-        y = zeros(length(x))
-        for (e,v) in new_edges
-            y[e[1]] = v
-        end
-        return y
-    elseif order - k == 2
-	  index = 1
-	  m = length(new_edges)
-	  I = zeros(Int64,2*m)
-	  J = zeros(Int64,2*m)
-	  V = zeros(N,2*m)
-
-	  for (e,val) in new_edges
-	    I[index] = e[1]
-		J[index] = e[2]
-		I[index+1] = e[2]
-		J[index+1] = e[1]
-		V[index] = val
-		V[index+1] = val
-		index += 2
-	  end
-	  return sparse(I,J,V)
-	else
-        return SSSTensor(new_edges)
-    end
-end
-
 
 """-----------------------------------------------------------------------------
     contract_k_1(A,x)
