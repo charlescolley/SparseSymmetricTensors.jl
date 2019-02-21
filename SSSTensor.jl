@@ -610,7 +610,7 @@ end
 
 
 """-----------------------------------------------------------------------------
-    dense_contraction(A, x, m)
+    dense_contract(A, x, m)
 
 This function computes a m mode contraction for a dense kth order cubical
 tensor representation, with a vector of the appropriate dimension. Note that
@@ -632,15 +632,15 @@ Output
 * y - (Array{Float64,k-m}):
   the result of the m mode contraction.
 -----------------------------------------------------------------------------"""
-function dense_contraction(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
+function dense_contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
 
-    return dense_contraction(A,x,zeros(Int,repeat([0],m)...),
-                             zeros(Int,repeat([0],k-m)...))
+    return dense_contract(A,x,zeros(Int,repeat([0],m)...),
+	                      zeros(Int,repeat([0],k-m)...))
 end
 
-@generated function dense_contraction(A::Array{N,k}, x::Array{M,1},
-                                      B::Array{Int,m}, C::Array{Int,p}) where
-                                      {M<:Number,N<:Number,k,m,p}
+@generated function dense_contract(A::Array{N,k}, x::Array{M,1},
+                                   B::Array{Int,m}, C::Array{Int,p}) where
+								   {M<:Number,N<:Number,k,m,p}
     quote
         n = size(A)[1]
         @assert n == length(x)
@@ -738,5 +738,29 @@ function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
 
   end
 end
+
+function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
+                                 tol::Float64,m::Int64 = 1) where {N <: Number,k}
+  #k = length(size(A))
+  n = size(A)[1]
+  @assert m <= n
+  @assert length(x0) == n
+
+  x = copy(x0)
+
+  while true
+    _,V = eigen(SSST.dense_contract(A,x,k-2))
+    dxdt = sign(real(V[1,m]))*real(V[:,m]) - x
+	x /= norm(x)
+
+	if norm(dxdt) <= tol
+      return x
+    else
+      x += h*dxdt
+    end
+
+  end
+end
+
 
 end #module end
