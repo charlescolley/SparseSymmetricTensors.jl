@@ -4,7 +4,9 @@ module SSST
 using Combinatorics
 using Base.Cartesian
 using Printf
-
+using Arpack
+using SparseArrays
+using LinearAlgebra
 
 
 mutable struct SSSTensor
@@ -22,7 +24,7 @@ mutable struct SSSTensor
     end
 
     function SSSTensor(A::Array{N,k}) where {N <: Number,k}
-        edge_dict, n = SSSTensor_from_Array(A,zeros(Int,repeat([0],k-1)...))
+        edge_dict, n = SSSTensor_from_Array(A)
         new(edge_dict,n)
     end
 
@@ -30,16 +32,19 @@ end
 
 
 
-@generated function SSSTensor_from_Array(A::Array{N,k},B::Array{Int,p}) where {N<:Number,k,p}
+@generated function SSSTensor_from_Array(A::Array{N,k}) where {N<:Number,k,p}
     quote
 
-        n = size(A)[1]
-    #    @assert all((x)->x == n, size(A)) #cubical tensor
+        shape = size(A)
+        n = shape[1]
+        for i in 2:length(shape)
+            if shape[i] != n
+                error("input tensor is not cubical")
+            end
+        end
 
         y = Dict{Array{Int64,1},N}()
-        c = $k
-        @show c
-        string_as_varname_function(@sprintf("i_%d",c+1),n)
+        string_as_varname_function(@sprintf("i_%d",$k+1),n)
         @nloops $k i d-> 1:i_{d+1} begin
             indices = @ntuple $k i
             add_perm!(y,A,$k,indices)
@@ -58,7 +63,7 @@ function add_perm!(edges,A,order,indices)
     sum = 0.0
 
     tol = 1e-12
-    for p in permutations(indices)
+    for p in unique(permutations(indices))
         sum += A[p...]
         if abs(A[p...] - val) > tol
             error("tensor is not symmetric")
@@ -494,7 +499,24 @@ function contract(A::SSSTensor, x::Array{N,1},k::Int) where {N <: Number}
             y[e[1]] = v
         end
         return y
-    else
+    elseif order - k == 2
+	  index = 1
+	  m = length(new_edges)
+	  I = zeros(Int64,2*m)
+	  J = zeros(Int64,2*m)
+	  V = zeros(N,2*m)
+
+	  for (e,val) in new_edges
+	    I[index] = e[1]
+		J[index] = e[2]
+		I[index+1] = e[2]
+		J[index+1] = e[1]
+		V[index] = val
+		V[index+1] = val
+		index += 2
+	  end
+	  return sparse(I,J,V)
+	else
         return SSSTensor(new_edges)
     end
 end
@@ -605,7 +627,7 @@ Inputs
 * m - (Int)
   an integer indicating the number of modes to contract along
 
-Outputs
+Output
 -------
 * y - (Array{Float64,k-m}):
   the result of the m mode contraction.
@@ -630,8 +652,14 @@ end
             xs = prod(x[collect(@ntuple $m j-> i_{j+$p})])
             (@nref $p y i) += xs*(@nref $k A i)
         end
-        return y
-    end
+	if $k == m
+	  for val in y
+	    return val
+	  end
+	else
+          return y
+        end
+      end
 end
 
 """-----------------------------------------------------------------------------
@@ -658,6 +686,57 @@ associated along with a count of the non-zeros.
     end
 end
 
+"""-----------------------------------------------------------------------------
+    Dynamical_System_Solver(A,m=1)
 
+    This function takes in a sparse symmetric tensor and computes the tensor
+  eigenvector by solving the dynamical system formed by contracting the tensor
+  A into a vector, and then computing the mth largest eigenvector of the matrix
+  Ax^{k-1}. With this we form the dynamical system
+                        dxdt = :Lambda_m(Ax^{k+1})
+  which we solve with a forward Euler scheme with a step size of h, starting at
+  the point x0. We solve this until the norm of dxdt reaches a specified
+  tolerance
+
+  Inputs:
+  -------
+  A - (SSSTensor)
+    The symmetric tensor to compute the eigenvector of.
+  x0 - (Array{Number,1})
+    The initial starting point for solving the dynamical system.
+  h - (Float64)
+    The step size for running the forward Euler scheme.
+  tol - (Float64)
+    The tolerance to solve the dynamical system up to, stops when
+    norm(dxdt) < tol.
+  m - (Int)
+    The eigenvector to find when computing the dynamical system. Default is the
+    largest eigenvector of the matrix.
+  Output:
+  -------
+  x - (Array{Number,1}
+    the resulting eigenvector computed by the dynamical system method.
+-----------------------------------------------------------------------------"""
+function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
+                                 tol::Float64,m::Int64 = 1) where N <: Number
+  n = A.cubical_dimension
+  @assert m <= n
+  @assert length(x0) == n
+  k = SSST.order(A)
+  x = copy(x0)
+
+  while true
+    _,V,_ = eigs(SSST.contract(A,x,k-2),nev=m)
+    dxdt = sign(V[1,m])*V[:,m] - x
+	x /= norm(x)
+
+	if norm(dxdt) <= tol
+      return x
+    else
+      x += h*dxdt
+    end
+
+  end
+end
 
 end #module end
