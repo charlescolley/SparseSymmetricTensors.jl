@@ -1,6 +1,6 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
-module SSST
+#module SSST
 using Combinatorics
 using Base.Cartesian
 using Printf
@@ -14,13 +14,10 @@ mutable struct SSSTensor
     cubical_dimension::Int
     SSSTensor(e,n) =
        SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
-    function SSSTensor(e)
-        indices_valid, n = SSSTensor_verifier(e)
-        if indices_valid
-            new(reduce_edges(e),n)
-        else
-            error("invalid indices")
-        end
+
+	function SSSTensor(e)
+	  n = SSSTensor_verifier(e)
+	  new(reduce_edges(e),n)
     end
 
     function SSSTensor(A::Array{N,k}) where {N <: Number,k}
@@ -39,7 +36,7 @@ end
         n = shape[1]
         for i in 2:length(shape)
             if shape[i] != n
-                error("input tensor is not cubical")
+                error(string("input tensor of shape ",shape," is not cubical"))
             end
         end
 
@@ -66,8 +63,7 @@ function add_perm!(edges,A,order,indices)
     for p in unique(permutations(indices))
         sum += A[p...]
         if abs(A[p...] - val) > tol
-            error("tensor is not symmetric")
-            #would be good to print the permutation which raises error
+            error(string("tensor is not symmetric: index ",p," has different values"))
         end
     end
     #add in the average of the values of the permutations of the tensor
@@ -212,10 +208,9 @@ Outputs:
 function SSSTensor_verifier(edges::Union{Array{Tuple{Array{Int,1},N},1},Dict{Array{Int64,1},N}}
                             ,n::Int) where N <: Number
 
-    indices_are_valid, max_index = SSSTensor_verifier(edges)
+    max_index = SSSTensor_verifier(edges)
 
-    @show indices_are_valid, max_index
-    return indices_are_valid && max_index <= n
+    return max_index <= n
 end
 
 #UNTESTED
@@ -235,9 +230,6 @@ Inputs:
 
 Output:
 -------
-* are_valid - (Bool):
-    A bool indicating whether or not the edges all have positive indices and
-    the indices are sorted, and have same number of indices.
 * max_index - (Int):
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
@@ -250,19 +242,22 @@ function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
             order = length(indices)
         else
             if length(indices) != order
-                error("edge is wrong order")
+                error(string("hyperedge ",indices," must be order ",order))
             end
         end
 
-        if !issorted(indices) || any(x -> x < 1,indices)
-            return false, 0
+        if !issorted(indices)
+		  error(string(indices, " must be sorted ascendingly"))
+        end
+		if any(x -> x < 1,indices)
+		  error(string(indices," has an index < 1"))
         end
         if indices[end] > max_index
             max_index = indices[end]
         end
     end
 
-    return true, max_index
+    return max_index
 end
 
 
@@ -281,34 +276,34 @@ Inputs:
 
 Output:
 -------
-* are_valid - (Bool):
-    A bool indicating whether or not the edges all have positive indices and
-    the indices are sorted, and have same number of indices.
 * max_index - (Int):
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
-    max_index = -Inf
-    order = -1
-    for (edge,_) in edges
-        if order == -1
-            order = length(edge)
-        else
-            if length(edge) != order
-                error("edge is wrong order")
-            end
-        end
-
-        if !issorted(edge) || any(x -> x < 1,edge)
-            return false, 0
-        end
-        if edge[end] > max_index
-            max_index = edge[end]
-        end
+  max_index = -Inf
+  order = -1
+  for (indices,_) in edges
+    if order == -1
+	  order = length(indices)
+    else
+	  if length(indices) != order
+	    error(string("hyperedge ",indices," must be order ",order))
+	  end
     end
 
-    return true, max_index
+    if !issorted(indices)
+	  error(string(indices, " must be sorted ascendingly"))
+    end
+    if any(x -> x < 1,indices)
+	  error(string(indices," has an index < 1"))
+    end
+    if indices[end] > max_index
+	  max_index = indices[end]
+    end
+  end
+
+  return max_index
 end
 
 #UNTESTED
@@ -643,7 +638,7 @@ Output:
 
 Note
 ----
-Change to include tuples too.
+TODO: Change to include tuples too.
 -----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
     multiplicities = Dict()
@@ -772,4 +767,4 @@ function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
 end
 
 
-end #module end
+#end #module end
