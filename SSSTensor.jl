@@ -5,8 +5,8 @@
 using Base.Cartesian
 using Printf
 using SparseArrays
+using DataStructures
 
-import DataStructures.Queue
 import MatrixNetworks.triangles_iterator
 import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
@@ -746,7 +746,7 @@ Input:
     index i.
 Note:
 -----
-  originally planned to be named permute!, but Base.permute! must be overloaded
+  Originally planned to be named permute!, but Base.permute! must be overloaded
 -----------------------------------------------------------------------------"""
 function permute_tensor!(A::SSSTensor,p::Array{Int,1})
   @assert length(p) == A.cubical_dimension
@@ -758,6 +758,7 @@ function permute_tensor!(A::SSSTensor,p::Array{Int,1})
   end
   A.edges = permuted_edges
 end
+
 """-----------------------------------------------------------------------------
     find_nnz(A)
 
@@ -780,6 +781,30 @@ indices associated along with a count of the non-zeros.
         nnz -= 1 #take care of overcount
         return y[1:nnz], nnz
     end
+end
+
+"""-----------------------------------------------------------------------------
+    get_sub_tensor(A,indices)
+
+  This function produced a subtensor which only containes the vertices specified
+in the array indices. Note that there must be hyper edges shared between the
+vertices in indices, otherwise the SSSTensor constructor will throw an error
+when given an empty list of hyperedges.
+
+Input:
+------
+* A - (SSSTensor)
+    The tensor to produce a subtensor from.
+* indices - (Array{Int,1})
+    The indices to build a subtensor from.
+-----------------------------------------------------------------------------"""
+function get_sub_tensor(A::SSSTensor,indices::Array{Int,1})
+  @assert 0 < length(indices) <= A.cubical_dimension
+
+  incident_edges = find_edge_incidence(A)
+
+
+
 end
 
 """-----------------------------------------------------------------------------
@@ -912,7 +937,6 @@ Output:
 -----------------------------------------------------------------------------"""
 function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
                 N <: Number
-    println(length(x_0),A.cubical_dimension)
     @assert A.cubical_dimension == length(x_0)
 
     x = x_0/norm(x_0)
