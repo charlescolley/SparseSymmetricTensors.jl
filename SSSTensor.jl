@@ -730,7 +730,34 @@ function multiplicity_factor(indices::Array{Int,1})
     return multinomial(final_counts...)
 end
 
+"""-----------------------------------------------------------------------------
+    permute_tensor!(A,p)
 
+  This function applies a permutation to the indices in the sparse tensor
+defined by the array p. Iterates have the permutation applied and indices are
+resorted.
+
+Input:
+------
+* A - (SSSTensor)
+    The tensor to apply the permutation to.
+* p - (Array{Int,1})
+    The permutation array, where p[i] = j implies that vertex j is mapped to
+    index i.
+Note:
+-----
+  originally planned to be named permute!, but Base.permute! must be overloaded
+-----------------------------------------------------------------------------"""
+function permute_tensor!(A::SSSTensor,p::Array{Int,1})
+  @assert length(p) == A.cubical_dimension
+  @assert Set(1:length(p)) == Set(p)  #check for a proper permutation
+
+  permuted_edges = Dict{Array{Int,1},Number}()
+  for (indices,val) in A.edges
+    permuted_edges[sort(map(i->p[i],indices))] = val
+  end
+  A.edges = permuted_edges
+end
 """-----------------------------------------------------------------------------
     find_nnz(A)
 
@@ -1029,8 +1056,8 @@ end
 """-----------------------------------------------------------------------------
     find_edge_incidence(A)
 
-    This function creates a dictionary linking each vertex to each of the hyper
-  edges associated with that edge.
+  This function creates a dictionary linking each vertex to each of the hyper
+edges associated with that edge.
 
  Input:
  ------
