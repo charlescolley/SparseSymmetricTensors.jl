@@ -1,32 +1,54 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
 #module SSST
-using Combinatorics
+
 using Base.Cartesian
 using Printf
-using Arpack
 using SparseArrays
-using LinearAlgebra
+
+import DataStructures.Queue
+import MatrixNetworks.triangles_iterator
+import Combinatorics.permutations, Combinatorics.multinomial
+import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
+import Arpack.eigs
+
 
 
 mutable struct SSSTensor
-    edges::Dict{Array{Int,1},Number}
-    cubical_dimension::Int
-    SSSTensor(e,n) =
-       SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
+  edges::Dict{Array{Int,1},Number}
+  cubical_dimension::Int
 
-	function SSSTensor(e)
-	  n = SSSTensor_verifier(e)
-	  new(reduce_edges(e),n)
-    end
+  SSSTensor(e,n) =
+    SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
+    # Need to adjust the error message on this constructor
 
-    function SSSTensor(A::Array{N,k}) where {N <: Number,k}
-        edge_dict, n = SSSTensor_from_Array(A)
-        new(edge_dict,n)
+  function SSSTensor(e)
+    n = SSSTensor_verifier(e)
+    new(reduce_edges(e),n)
+  end
+
+  function SSSTensor(A::Array{N,k}) where {N <: Number,k}
+    edge_dict, n = SSSTensor_from_Array(A)
+	new(edge_dict,n)
+  end
+
+  function SSSTensor(T::triangles_iterator)
+    edges = Array{Tuple{Array{Int64,1},Float64}}(undef,0)
+    for t in T
+      push!(edges,([t.v1,t.v2,t.v3],1.0))
     end
+	SSSTensor(edges)
+  end
+
+  function SSSTensor(T::triangles_iterator,n)
+    edges = Array{Tuple{Array{Int64,1},Float64}}(undef,0)
+    for t in T
+      push!(edges,([t.v1,t.v2,t.v3],1.0))
+    end
+	SSSTensor(edges,n)
+  end
 
 end
-
 
 
 @generated function SSSTensor_from_Array(A::Array{N,k}) where {N<:Number,k,p}
@@ -143,8 +165,8 @@ end
 the list into a dictionary where the edges that have the same edges are added
 together.
 
-Inputs:
--------
+Input:
+------
 * edges -(Array{{Array{Int,1},Number},1}):
     2 Tuples which contain the sorted indices and an edge weight associated with
     it.
@@ -222,8 +244,8 @@ appropriate for a super symmetric tensor. Finds the largest index and over all
 the edges and sets that as the cubical dimension of the tensor. Used as a helper
 function for the SSSTensor constructors.
 
-Inputs:
--------
+Input:
+------
 * edges - (Dict{Array{Int64,1},Number}):
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
@@ -261,6 +283,7 @@ function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
 end
 
 
+
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
 
@@ -268,8 +291,8 @@ end
 whether or not the edges are appropriate for a super symmetric tensor with
 dimension n. Used as a helper function for the SSSTensor constructors.
 
-Inputs:
--------
+Input:
+------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
@@ -313,8 +336,8 @@ end
   This function takes in a list of edges and adds them into the SSSTensor. If an
 edge is already present in the tensor, and the value is added in at that index.
 
-Inputs:
--------
+Input:
+------
 * A - (SSSTensor)
     The tensor to add hyper edges to.
 * edges - (Array{Tuple{Array{Int,1},Float},1})
@@ -373,8 +396,8 @@ This function takes in an edge of a super symmetric tensor and computes the
 resulting edges which result from contracting the the edge along k modes with
 the vector x.
 
-Inputs:
--------
+Input:
+------
 * e -(Tuple(Array{Int,1},Float)):
     A list of indices paired with an edge value. Note that the list of indices
     corresponds to multiple sets of indices because we consider all.
@@ -415,6 +438,7 @@ function contract_edge(e::Tuple{Array{Int,1},M},x::Array{N,1},k::Int) where {N <
             reduce_dictionaries!(condensed_dict,sub_dict)
         end
     end
+
     return condensed_dict
 end
 
@@ -426,8 +450,8 @@ end
 resulting edges which result from contracting the the edge along k-1 modes with
 the vector x, where k is the order of the hyper edge.
 
-Inputs:
--------
+Input:
+------
 * e -(Tuple(Array{Int,1},Number)):
     a list of sorted indices paired with an edge value. Note that the list of
     indices corresponds to multiple sets of indices because we consider all
@@ -488,7 +512,7 @@ with a variable used a trick which instantiates empty arrays of length 0, and
 passes them to another function which can pull the orders out to generate the
 loops.
 
-Inputs
+Input:
 ------
 * A -(SSSTensor or Array{Number,k}):
     The tensor to contract.
@@ -497,7 +521,7 @@ Inputs
 * m - (Int)
     The number of modes to contract A with x along.
 
-Outputs
+Output:
 -------
 * y - (SSSTensor or CSC Matrix or Array{Float64,k-m}):
     The output vector of Ax^m. THe output will be sparse if the input tensor is
@@ -506,8 +530,8 @@ Outputs
 -----------------------------------------------------------------------------"""
 function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: Number}
     @assert length(x) == A.cubical_dimension
-    order = SSST.order(A)
-    @assert 0 < m <= order
+    k = order(A)
+    @assert 0 < m <= k
 
     new_edges = Dict{Array{Int,1},N}()
     #compute contractions
@@ -516,35 +540,43 @@ function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: Number}
         reduce_dictionaries!(new_edges,new_e)
     end
 
-    if order == m
+    if k == m
         for (_,v) in new_edges
             return v
         end
-    elseif order - m == 1
+    elseif k - m == 1
         y = zeros(length(x))
         for (e,v) in new_edges
             y[e[1]] = v
         end
         return y
-    elseif order - m == 2
-	  index = 1
+    elseif k - m == 2
+	  index = 0
 	  nnzs = length(new_edges)
 	  I = zeros(Int64,2*nnzs)
 	  J = zeros(Int64,2*nnzs)
 	  V = zeros(N,2*nnzs)
 
 	  for (e,val) in new_edges
-	    I[index] = e[1]
-		J[index] = e[2]
-		I[index+1] = e[2]
-		J[index+1] = e[1]
-		V[index] = val
-		V[index+1] = val
-		index += 2
+	     i,j = e
+		 if i == j
+		   index += 1
+		   I[index] = i
+		   J[index] = j
+		   V[index] = val
+	     else
+		   index += 2
+ 	       I[index-1] = i
+		   J[index-1] = j
+		   I[index] = j
+		   J[index] = i
+		   V[index-1] = val
+		   V[index] = val
+		 end
 	  end
-	  return sparse(I,J,V)
+	  return sparse(I[1:index],J[1:index],V[1:index],A.cubical_dimension,A.cubical_dimension)
 	else
-        return SSSTensor(new_edges)
+        return SSSTensor(new_edges,A.cubical_dimension)
     end
 end
 
@@ -599,7 +631,6 @@ Outputs
 -----------------------------------------------------------------------------"""
 function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
     @assert length(x) == A.cubical_dimension
-    order = SSST.order(A)
 
     new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
     y = zeros(A.cubical_dimension)
@@ -619,6 +650,40 @@ function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
 end
 
 """-----------------------------------------------------------------------------
+    contract_multi(A,vs)
+
+  This function computes the result of contracting the tensor A by the columns
+of the array Vs.
+
+-----------------------------------------------------------------------------"""
+function contract_multi(A::SSSTensor, Vs::Array{N,2}) where N <: Number
+  k = order(A)
+  n,m = size(Vs)
+  @assert m <= k
+  @assert n == A.cubical_dimension
+
+  i = 1
+  while true
+    if k - i >= 2
+      global A_sub = contract(A,Vs[:,i],1)
+    elseif k - i == 1
+	  global A_sub = A_sub*Vs[:,i]
+    elseif k - i == 0
+	  global A_sub = dot(A_sub,Vs[:,i])
+    end
+	i += 1
+
+	if i > m #no more vectors
+	  return A_sub
+    end
+  end
+end
+
+function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: Number
+  return contract_multi(A,hcat(v,u))
+end
+
+"""-----------------------------------------------------------------------------
     multiplicity_factor(indices)
 
   This function takes in a list of indices and returns the multinomial
@@ -626,8 +691,8 @@ coefficient computed by the frequency of the values in the indices. Works as a
 helper function for computing the number of non-zeros the edge represents in the
 vector contraction routines.
 
-Inputs:
--------
+Input:
+------
 * indices -(Array{Int,1}):
   The indices associated with the hyper edge.
 
@@ -689,7 +754,7 @@ indices associated along with a count of the non-zeros.
 end
 
 """-----------------------------------------------------------------------------
-    Dynamical_System_Solver(A,m=1)
+    Dynamical_System_Solver(A,x0,h,tol,m=1,update=0)
 
   This function takes in a sparse symmetric tensor and computes the tensor
 eigenvector by solving the dynamical system formed by contracting the tensor
@@ -700,8 +765,8 @@ which we solve with a forward Euler scheme with a step size of h, starting at
 the point x0. We solve this until the norm of dxdt reaches a specified
 tolerance.
 
-Inputs:
--------
+Input:
+------
 * A - (SSSTensor or Array{Number,k})
     The symmetric tensor to compute the eigenvector of. Functions are
     overloaded to handle appropriate type.
@@ -715,33 +780,55 @@ Inputs:
 * m - (Int)
     The eigenvector to find when computing the dynamical system. Default is the
     largest eigenvector of the matrix.
+* update - (Int)
+    Indicates how many steps the program should update the user by, default
+    value is 0.
 
 Output:
 -------
 * x - (Array{Number,1}
     The resulting eigenvector computed by the dynamical system method.
+* lambda - (Number)
+    The resulting eigenvalue computed by the dynamical system method.
 -----------------------------------------------------------------------------"""
 function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
-                                 tol::Float64,m::Int64 = 1) where N <: Number
+                                 tol::Float64,m::Int64 = 1, update::Int = 0) where
+								 N <: Number
+                                 #start with strictly positive random vector
+                                 #check the monotonic dereasing property
   n = A.cubical_dimension
   @assert m <= n
   @assert length(x0) == n
-  k = SSST.order(A)
-  x = copy(x0)
+  k = order(A)
+  x = copy(x0)/norm(x0)
+  step = 1
 
   while true
-    _,V,_ = eigs(SSST.contract(A,x,k-2),nev=m)
+    A_x_k_2 = contract(A,x,k-2)
+    _,V,_ = eigs(A_x_k_2,nev=m) # check eigs
     dxdt = sign(V[1,m])*V[:,m] - x
-	x /= norm(x)
+#	x /= norm(x)
 
 	if norm(dxdt) <= tol
-      return x
+      return x, x'*A_x_k_2*x
     else
       x += h*dxdt
     end
 
+	if update > 0
+	  if step % update == 0
+	    z = A_x_k_2*x
+		lambda = dot(x,z)
+		residual = z - lambda*x
+	    @printf("step %5d: norm(dxdt) = %.16f | lambda = %.16f | res norm = %.16f \n",
+		       step, norm(dxdt),lambda, norm(residual))
+	  end
+	end
+    step += 1
   end
 end
+
+#figure out if it's faster to do an internal check than two overloaded functions
 
 function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
                                  tol::Float64,m::Int64 = 1) where {N <: Number,k}
@@ -749,11 +836,10 @@ function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
   n = size(A)[1]
   @assert m <= n
   @assert length(x0) == n
-
   x = copy(x0)
 
   while true
-    _,V = eigen(SSST.dense_contract(A,x,k-2))
+    _,V = eigen(contract(A,x,k-2))
     dxdt = sign(real(V[1,m]))*real(V[:,m]) - x
 	x /= norm(x)
 
@@ -762,9 +848,126 @@ function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
     else
       x += h*dxdt
     end
-
   end
 end
 
+"""-----------------------------------------------------------------------------
+    SSHOPM(A,x_0,shift,max_iter,tol)
 
+  This function runs the shifts symmetric higher order power method for a super
+symmetric tensor with the passed in shift, up to a tolerance or up until a
+maximum iteration.
+
+Input:
+------
+* A - (SSSTensor):
+    An instance of the super symmetric tensor class.
+* x_0 - (Array{Number,1}):
+    An initial vector to start the algorithm with.
+* shift - (Number)
+    The shift for the algorithm, can be predetermined to ensure convergence of
+    the method.
+* max_iter - (Int)
+    The maximum number of iterations to run the routine for, prints a warning if
+    the method hasn't converged by then.
+* tol - (Float)
+    The tolerance in difference between subsequent approximate eigenvalues to
+    solve the routine up to.
+
+Output:
+-------
+* z - (Array{Number,1})
+    The final vector produced by the SSHOPM routine.
+* lambda_k - (Number)
+    The final approximate eigenvalue at the last iteration.
+-----------------------------------------------------------------------------"""
+function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
+                N <: Number
+    println(length(x_0),A.cubical_dimension)
+    @assert A.cubical_dimension == length(x_0)
+
+    x = x_0/norm(x_0)
+    iterations = 0
+    lambda_k_1 = Inf
+
+    while true
+
+        if shift > 0
+            z = contract_k_1(A,x) + shift*x
+        elseif shift == 0
+            z = contract_k_1(A,x)
+        else
+            z = -(contract_k_1(A,x) + shift*x)
+        end
+
+        lambda_k = x'*z
+
+        #normalize
+        z /= norm(z)
+
+        iterations += 1
+        @show z
+        @printf("lambda_k = %f\n",lambda_k)
+        @printf("lambda diff = %f\n",abs(lambda_k - lambda_k_1))
+        if abs(lambda_k - lambda_k_1) < tol || iterations >= max_iter
+            if iterations >= max_iter
+                @warn("maximum iterations reached")
+            end
+            return z, lambda_k
+        else
+            lambda_k_1 = lambda_k
+            x = z
+        end
+    end
+end
+
+
+"""-----------------------------------------------------------------------------
+    find_shift_for_convergence(A,use_fro)
+
+  This function takes in a tensor and computes a shift bound to ensure
+convergence of the SSHOPM. If the contracted tensor is large, this can be
+computed with the frobenius norm.
+
+Input:
+------
+* A - (SSSTensor):
+    An instance of a super symmetric tensor class.
+* use_fro - (bool):
+    Indicates whether or not to use the frobenius norm.
+
+Output:
+-------
+* shift_bound - (Float)
+    A float indicating the lower bound for which the method is guaranteed to
+    converge.
+-----------------------------------------------------------------------------"""
+function find_shift_for_convergence(A::SSSTensor)
+    error("unfinished")
+    shift_bound = (order(A) -1)
+    if use_fro
+        shift_bound *= contract(A)
+    end
+
+end
+
+
+"""-----------------------------------------------------------------------------
+    connected_components(A)
+
+  This function computes the connected components of the undirected hypergraph
+associated with the tensor A. The algorithm runs a breadth first search until
+all the vertices are found and returns an array with the component number for
+each vertex, and an array which stores the visting order.
+
+Input:
+------
+* A - (SSSTensor)
+    The tensor to find the conncected components of.
+
+Output:
+-------
+-----------------------------------------------------------------------------"""
+function connected_components(A::SSSTensor,v0::Int = 1)
+end
 #end #module end
