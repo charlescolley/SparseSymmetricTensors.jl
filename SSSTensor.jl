@@ -12,6 +12,8 @@ import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
 import Arpack.eigs
 
+#TODO: SSSTensor([i,j,k]) returns abnormal result, this should be altered to set
+# default hyperedge weight to 1.
 
 
 mutable struct SSSTensor
@@ -964,10 +966,102 @@ Input:
 ------
 * A - (SSSTensor)
     The tensor to find the conncected components of.
-
+* v0 - (Int)
+    Optional starting vertex of bfs tree, default will be 1.
 Output:
 -------
+* component_count - (Int)
+    The number of connected components in the hypergraph.
+* component_assignment - (Array{Int,1})
+    The array storing the components each vertex belongs too.
+* visting_order - (Array{Int,1})
+    The order the vertices were visited in, used for permuting into block
+    diagonal structures.
 -----------------------------------------------------------------------------"""
 function connected_components(A::SSSTensor,v0::Int = 1)
+  n = A.cubical_dimension
+
+  #initialize variables
+  component_count = 1
+  visited_vertex_count = 1
+
+  unvisited_vertices = Set(1:n)
+  q = Queue{Int}()
+  enqueue!(q,v0)
+  delete!(unvisited_vertices,v0)
+
+  visiting_order = zeros(n)
+  component_assignment = zeros(n)
+
+  edge_incidence = find_edge_incidence(A)
+
+  while length(q.store) != 0
+
+	v = dequeue!(q)
+
+	#record information about v
+	visiting_order[v] = visited_vertex_count
+    component_assignment[v] = component_count
+	visited_vertex_count += 1
+
+
+	#add neighbors to queue
+	for (indices,_) in edge_incidence[v]
+	  for neighbor in unique(indices)
+	    if neighbor in unvisited_vertices
+		  enqueue!(q,neighbor)
+		  delete!(unvisited_vertices,neighbor)
+		end
+	  end
+
+	end
+
+	#check for diconnected components
+ 	if (length(q.store) == 0) && (length(unvisited_vertices) > 0)
+ 	  #add random unvisited vertex
+       enqueue!(q,pop!(unvisited_vertices))
+ 	  component_count += 1
+     end
+  end
+
+  return component_count, component_assignment, visiting_order
+end
+"""-----------------------------------------------------------------------------
+    find_edge_incidence(A)
+
+    This function creates a dictionary linking each vertex to each of the hyper
+  edges associated with that edge.
+
+ Input:
+ ------
+* A - (SSSTensor)
+    The tensor to find the hyper edge association of.
+
+ Output:
+ -------
+* edge_incidence - (Dict{Int,Array{Tuple{Array{Int,1},Number}},1})
+    The dictionary which links all vertices to the hyper edges they're contained
+    within.
+-----------------------------------------------------------------------------"""
+function find_edge_incidence(A::SSSTensor)
+  edge_incidence = Dict{Int,Array{Tuple{Array{Int,1},Number},1}}()
+
+  for (indices,val) in A.edges
+    prev_v = -1
+    for v in indices
+	  if prev_v == v
+	    continue
+	  else
+  	    if !haskey(edge_incidence,v)
+	      edge_incidence[v] = [(indices,val)]
+	    else
+	      push!(edge_incidence[v],edge)
+	    end
+	  end
+	  prev_v = v
+	end
+  end
+
+  return edge_incidence
 end
 #end #module end
