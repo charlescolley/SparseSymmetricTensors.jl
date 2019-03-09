@@ -1114,18 +1114,19 @@ edges associated with that edge.
  edge_indicence value type should be converted to a set for better usage.
 -----------------------------------------------------------------------------"""
 function find_edge_incidence(A::SSSTensor)
-  edge_incidence = Dict{Int,Array{Tuple{Array{Int,1},Number},1}}()
+  edge_incidence = Set{Tuple{Array{Int,1},Number},1}()
 
   for (indices,val) in A.edges
+    edge = (indices,val)
     prev_v = -1
     for v in indices
 	  if prev_v == v
 	    continue
 	  else
   	    if !haskey(edge_incidence,v)
-	      edge_incidence[v] = [(indices,val)]
+	      edge_incidence[v] = Set(edge)
 	    else
-	      push!(edge_incidence[v],(indices,val))
+	      push!(edge_incidence[v],edge)
 	    end
 	  end
 	  prev_v = v
