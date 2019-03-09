@@ -795,16 +795,28 @@ Input:
 ------
 * A - (SSSTensor)
     The tensor to produce a subtensor from.
-* indices - (Array{Int,1})
+* indices - (Array{Int,1} or Set{Int})
     The indices to build a subtensor from.
+Output:
+-------
+* sub_tensor - (SSSTensor)
+    The subtensor which c
 -----------------------------------------------------------------------------"""
-function get_sub_tensor(A::SSSTensor,indices::Array{Int,1})
+function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},Set{Int}}
   @assert 0 < length(indices) <= A.cubical_dimension
+  @assert all(indices .> 0)
+
+  if T == Array{Int,1}
+    indices = Set(indices)
+  end
 
   incident_edges = find_edge_incidence(A)
 
+  sub_tensor_edges = Dict{Array{Int,1},Number}()
 
+  for v_i in indices
 
+  end
 end
 
 """-----------------------------------------------------------------------------
@@ -861,7 +873,7 @@ function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
     A_x_k_2 = contract(A,x,k-2)
     _,V,_ = eigs(A_x_k_2,nev=m) # check eigs
     dxdt = sign(V[1,m])*V[:,m] - x
-#	x /= norm(x)
+	#x /= norm(x)
 
 	if norm(dxdt) <= tol
       return x, x'*A_x_k_2*x
@@ -1021,10 +1033,10 @@ Input:
     Optional starting vertex of bfs tree, default will be 1.
 Output:
 -------
-* component_count - (Int)
-    The number of connected components in the hypergraph.
 * component_assignment - (Array{Int,1})
     The array storing the components each vertex belongs too.
+* component_sizes - (Array{Int,1})
+    An array which keeps track of the size of each component.
 * visting_order - (Array{Int,1})
     The order the vertices were visited in, used for permuting into block
     diagonal structures.
@@ -1043,6 +1055,7 @@ function connected_components(A::SSSTensor,v0::Int = 1)
 
   visiting_order = zeros(n)
   component_assignment = zeros(n)
+  component_sizes = [0]
 
   edge_incidence = find_edge_incidence(A)
 
@@ -1053,11 +1066,12 @@ function connected_components(A::SSSTensor,v0::Int = 1)
 	#record information about v
 	visiting_order[v] = visited_vertex_count
     component_assignment[v] = component_count
+	component_sizes[component_count] += 1
 	visited_vertex_count += 1
 
 
 	#add neighbors to queue
-	for (indices,_) in edge_incidence[v]
+	for (indices,_) in get(edge_incidence,v,[])
 	  for neighbor in unique(indices)
 	    if neighbor in unvisited_vertices
 		  enqueue!(q,neighbor)
@@ -1072,10 +1086,11 @@ function connected_components(A::SSSTensor,v0::Int = 1)
  	  #add random unvisited vertex
        enqueue!(q,pop!(unvisited_vertices))
  	  component_count += 1
+	  push!(component_sizes,0)
      end
   end
 
-  return component_count, component_assignment, visiting_order
+  return component_assignment, component_sizes, visiting_order
 end
 """-----------------------------------------------------------------------------
     find_edge_incidence(A)
@@ -1093,6 +1108,10 @@ edges associated with that edge.
 * edge_incidence - (Dict{Int,Array{Tuple{Array{Int,1},Number}},1})
     The dictionary which links all vertices to the hyper edges they're contained
     within.
+
+ TODO:
+ -----
+ edge_indicence value type should be converted to a set for better usage.
 -----------------------------------------------------------------------------"""
 function find_edge_incidence(A::SSSTensor)
   edge_incidence = Dict{Int,Array{Tuple{Array{Int,1},Number},1}}()
@@ -1106,7 +1125,7 @@ function find_edge_incidence(A::SSSTensor)
   	    if !haskey(edge_incidence,v)
 	      edge_incidence[v] = [(indices,val)]
 	    else
-	      push!(edge_incidence[v],edge)
+	      push!(edge_incidence[v],(indices,val))
 	    end
 	  end
 	  prev_v = v
