@@ -1084,7 +1084,7 @@ function connected_components(A::SSSTensor,v0::Int = 1)
 	#check for diconnected components
  	if (length(q.store) == 0) && (length(unvisited_vertices) > 0)
  	  #add random unvisited vertex
-       enqueue!(q,pop!(unvisited_vertices))
+	  enqueue!(q,pop!(unvisited_vertices))
  	  component_count += 1
 	  push!(component_sizes,0)
      end
@@ -1105,26 +1105,25 @@ edges associated with that edge.
 
  Output:
  -------
-* edge_incidence - (Dict{Int,Array{Tuple{Array{Int,1},Number}},1})
+* edge_incidence - (Dict{Int,Set{Tuple{Array{Int,1},Number}},1})
     The dictionary which links all vertices to the hyper edges they're contained
     within.
-
- TODO:
- -----
- edge_indicence value type should be converted to a set for better usage.
 -----------------------------------------------------------------------------"""
 function find_edge_incidence(A::SSSTensor)
-  edge_incidence = Set{Tuple{Array{Int,1},Number},1}()
+  edge_incidence = Dict{Int,Set{Tuple{Array{Int,1},Number}}}()
 
   for (indices,val) in A.edges
     edge = (indices,val)
-    prev_v = -1
+
+	println(typeof(edge))
+
+	prev_v = -1
     for v in indices
 	  if prev_v == v
 	    continue
 	  else
   	    if !haskey(edge_incidence,v)
-	      edge_incidence[v] = Set(edge)
+	      edge_incidence[v] = Set([edge])
 	    else
 	      push!(edge_incidence[v],edge)
 	    end
