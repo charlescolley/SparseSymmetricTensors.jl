@@ -1,6 +1,6 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
-#module SSST
+module SSST
 
 using Base.Cartesian
 using Printf
@@ -1147,4 +1147,5 @@ function find_edge_incidence(A::SSSTensor)
 
   return edge_incidence
 end
-#end #module end
+
+end #module end
