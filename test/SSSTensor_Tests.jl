@@ -1,36 +1,56 @@
 using Test
-using MATLAB
-using SSST
-include("SSSTensor.jl")
+#using MATLAB
+#using SSST
+include("../src/SSSTensor.jl")
 
-"""------------------------------------#----------------------------------------
-                               SSSTensor Test Suite"
------------------------------------------------------------------------------"""
-                                Constructor Tests
-#------------------------------------------------------------------------------#
+
+
+n = 5
+
 @testset "Contructor Tests" begin
-    @test_throws Error
+  valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
+  unordered_edge = [([2,3,1],1.0)]
+  negative_index = [([-1,2,3],1.0)]
+  @testset "Hyperedge List Constructor" begin
+    @test_throws ErrorException SSSTensor(unordered_edge) #unsorted indices
+    @test_throws ErrorException SSSTensor(unordered_edge,n)
+    @test_throws ErrorException SSSTensor(unordered_edge,1) # too small cubical dim
+    @test_throws ErrorException SSSTensor(valid_edges,1)
+    @test_throws ErrorException SSSTensor(negative_index,1)
+    @test_throws ErrorException SSSTensor(negative_index,n) #neg index
+    @test_throws ErrorException SSSTensor(negative_index)
+  end
+
+  @testset "Dense Tensor Constructor" begin
+    non_sym_tensor = rand(2,2,2,2)
+    sym_tensor = ones(2,2,2,2)
+    @test_throws ErrorException SSSTensor(non_sym_tensor)
+    @test_throws ErrorException SSSTensor(sym_tensor,1) # too small cubical dim
+    @test_throws ErrorException SSSTensor(non_sym_tensor,1)
+
+  end
+
+  @testset "Dictionary Constructor" begin
+    D_valid_edges = Dict(valid_edges)
+    D_unordered_edge = Dict(unordered_edge)
+    D_negative_index = Dict(negative_index)
+
+    @test_throws ErrorException SSSTensor(D_unordered_edge) #unsorted indices
+    @test_throws ErrorException SSSTensor(D_unordered_edge,n)
+    @test_throws ErrorException SSSTensor(D_unordered_edge,1) # too small cubical dim
+    @test_throws ErrorException SSSTensor(D_valid_edges,1)
+    @test_throws ErrorException SSSTensor(D_negative_index,1)
+    @test_throws ErrorException SSSTensor(D_negative_index,n) #neg index
+    @test_throws ErrorException SSSTensor(D_negative_index)
+  end
+  @test_throws ErrorException SSSTensor()
 
 end
-@test_throws
 
-"""-----------------------------------------------------------------------------
-                                Add Edges Tests
------------------------------------------------------------------------------"""
-
-
-"""-----------------------------------------------------------------------------
-                             Vector Contraction Tests
------------------------------------------------------------------------------"""
-
-
-"""-----------------------------------------------------------------------------
-                                Multiplicity Tests
------------------------------------------------------------------------------"""
 @testset "multiplicity_tests" begin
-    @Test multiplicity_factor([1,1,1,1,1]) = 1
-    @Test multiplicity_factor([1,2,1,1,1]) = 5
-    @Test multiplicity_factor([2,2,1,1,1]) = 10
+    @test multiplicity_factor([1,1,1,1,1]) == 1
+    @test multiplicity_factor([1,2,1,1,1]) == 5
+    @test multiplicity_factor([2,2,1,1,1]) == 10
 end
 
 #=
