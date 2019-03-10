@@ -15,6 +15,7 @@ import Arpack.eigs
 #TODO: SSSTensor([i,j,k]) returns abnormal result, this should be altered to set
 # default hyperedge weight to 1.
 
+#TODO: should raise an error message for an empty iterator in the contstuctor
 
 mutable struct SSSTensor
   edges::Dict{Array{Int,1},Number}
@@ -800,7 +801,8 @@ Input:
 Output:
 -------
 * sub_tensor - (SSSTensor)
-    The subtensor which c
+    The subtensor of A which only contains the hyperedges of A which all include
+    each index in indices.
 -----------------------------------------------------------------------------"""
 function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},Set{Int}}
   @assert 0 < length(indices) <= A.cubical_dimension
@@ -811,12 +813,25 @@ function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},S
   end
 
   incident_edges = find_edge_incidence(A)
-
-  sub_tensor_edges = Dict{Array{Int,1},Number}()
+  println(typeof(indices))
+  sub_tensor_edges = Array{Tuple{Array{Int,1},Number}}(undef,0)
 
   for v_i in indices
-
+    for (V,val) in get(incident_edges,v_i,[])
+	  edge = (V,val)
+	  #only include edge if all indices in hyperedge are desired
+	  println(indices,V)
+	  if all(x -> x in indices,V)
+	    push!(sub_tensor_edges,edge)
+      end
+	  #remove all other edges in incidence
+	  for v_j in V
+	    delete!(get(incident_edges,v_j,[]),edge)
+	  end
+	end
   end
+  println(sub_tensor_edges)
+  SSSTensor(sub_tensor_edges)
 end
 
 """-----------------------------------------------------------------------------
@@ -1114,8 +1129,6 @@ function find_edge_incidence(A::SSSTensor)
 
   for (indices,val) in A.edges
     edge = (indices,val)
-
-	println(typeof(edge))
 
 	prev_v = -1
     for v in indices
