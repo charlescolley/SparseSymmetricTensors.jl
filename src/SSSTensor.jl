@@ -1,6 +1,6 @@
 #=------------------------------------------------------------------------------
 ------------------------------------------------------------------------------=#
-module SSST
+#module SSSTensor
 
 using Base.Cartesian
 using Printf
@@ -16,6 +16,8 @@ import Arpack.eigs
 # default hyperedge weight to 1.
 
 #TODO: should raise an error message for an empty iterator in the contstuctor
+#TODO: possible to create a zero tensor from Dense Array, but not list constructor
+#      need to standardize this.
 
 mutable struct SSSTensor
   edges::Dict{Array{Int,1},Number}
@@ -30,9 +32,15 @@ mutable struct SSSTensor
     new(reduce_edges(e),n)
   end
 
-  function SSSTensor(A::Array{N,k}) where {N <: Number,k}
-    edge_dict, n = SSSTensor_from_Array(A)
-	new(edge_dict,n)
+  function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: Number,k}
+
+    if any(size(A) .> n)
+	  error("input Tensor size ",size(A),
+	        " has dimension too large for input cubical dimension ",n)
+	else
+      edge_dict, n = SSSTensor_from_Array(A)
+	  new(edge_dict,n)
+	end
   end
 
   function SSSTensor(T::triangles_iterator)
@@ -1148,4 +1156,4 @@ function find_edge_incidence(A::SSSTensor)
   return edge_incidence
 end
 
-end #module end
+#end #module end
