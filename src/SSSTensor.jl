@@ -18,6 +18,7 @@ import Arpack.eigs
 #TODO: should raise an error message for an empty iterator in the contstuctor
 #TODO: possible to create a zero tensor from Dense Array, but not list constructor
 #      need to standardize this.
+#TODO: possible to condense constructor definitions with default params
 
 mutable struct SSSTensor
   edges::Dict{Array{Int,1},Number}
@@ -119,11 +120,13 @@ end
 Input:
 ------
 * A -(SSSTensor):
+
     The tensor in question.
 
 Output:
 -------
 * order - (Int)
+
     The order of the tensor.
 -----------------------------------------------------------------------------"""
 function order(A::SSSTensor)
@@ -144,15 +147,18 @@ If no values are passed in, then the weights of each hyperedge are assumed to be
 Inputs:
 -------
 * A - (k x n Array{Int,2}):
+
     Each column corresponds to the indices of a hyper edges.
 
 Output:
 -------
 * D - (Dictionary{Array{Int,1},Float64}):
+
     The dictionary used to create the super symmetric tensor.
 
 Note:
 -----
+
 Add in weights to link to hyper edges.
 -----------------------------------------------------------------------------"""
 function matrix_to_dictionary(A::Array{Int,2})
@@ -179,12 +185,14 @@ together.
 Input:
 ------
 * edges -(Array{{Array{Int,1},Number},1}):
+
     2 Tuples which contain the sorted indices and an edge weight associated with
     it.
 
 Output:
 -------
 * edge_dict - (Dict{Array{Int,1},Number}):
+
     The resulting dictionary which has the edges aggregated together.
 -----------------------------------------------------------------------------"""
 function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
@@ -227,14 +235,17 @@ dimensions.
 Inputs:
 -------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
+
   An array which contains Tuples of index arrays and Tupleed edge values
   associated. The indices must be sorted.
 * n  - (Int):
+
   An iteger indicating the desired dimension of the cubical tensor.
 
 Outputs:
 --------
 * is_valid - (Bool)
+
     An integer indicating whether or not the edges are appropriate for the
     tensor specified.
 -----------------------------------------------------------------------------"""
@@ -258,12 +269,14 @@ function for the SSSTensor constructors.
 Input:
 ------
 * edges - (Dict{Array{Int64,1},Number}):
+
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
 
 Output:
 -------
 * max_index - (Int):
+
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
@@ -305,12 +318,14 @@ dimension n. Used as a helper function for the SSSTensor constructors.
 Input:
 ------
 * edges - (Array{Tuple{Array{Int,1},Float}}):
+
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
 
 Output:
 -------
 * max_index - (Int):
+
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
@@ -350,8 +365,10 @@ edge is already present in the tensor, and the value is added in at that index.
 Input:
 ------
 * A - (SSSTensor)
+
     The tensor to add hyper edges to.
 * edges - (Array{Tuple{Array{Int,1},Float},1})
+
     An array of pairs which contain the indices in the first element, and the
     value in the second element. Note each edge's indices must be in range.
 -----------------------------------------------------------------------------"""
@@ -381,11 +398,13 @@ end
 Inputs:
 -------
 * A - (SSSTensor)
+
     The sparse tensor to be converted.
 
 Output:
 -------
 * B - (Array{Number,k})
+
     The corresponding dense tensor representation of A.
 -----------------------------------------------------------------------------"""
 function dense(A::SSSTensor)
@@ -410,12 +429,15 @@ the vector x.
 Input:
 ------
 * e -(Tuple(Array{Int,1},Float)):
+
     A list of indices paired with an edge value. Note that the list of indices
     corresponds to multiple sets of indices because we consider all.
     permutations.
 * x -(Array{Float,1})
+
     The vector to contract with.
 * k - (Int):
+
     A positive integer which corresponds to the number of modes to contract
     along, must be greater than 0, and less than or equal to the cardinality
     of the edge.
@@ -423,6 +445,7 @@ Input:
 Output:
 -------
 * condensed_dict - (Dict{Array{Int,1},Number}
+
     The hyper edges in the lower order tensor which are formed by contracting
     the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
@@ -464,15 +487,18 @@ the vector x, where k is the order of the hyper edge.
 Input:
 ------
 * e -(Tuple(Array{Int,1},Number)):
+
     a list of sorted indices paired with an edge value. Note that the list of
     indices corresponds to multiple sets of indices because we consider all
     permutations.
 * x -(Array{Number,1})
+
     The vector of the same dimenionality of the tensor, to contract with.
 
 Output:
 -------
 * contraction_vals - (Array{Tuple{Array{Int,1},Number}})
+
     The hyper edges in the lower order tensor which are formed by contracting
     the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
@@ -526,15 +552,19 @@ loops.
 Input:
 ------
 * A -(SSSTensor or Array{Number,k}):
+
     The tensor to contract.
 * x - (Array{Number,1}):
+
     A vector of numbers to contract with.
 * m - (Int)
+
     The number of modes to contract A with x along.
 
 Output:
 -------
 * y - (SSSTensor or CSC Matrix or Array{Float64,k-m}):
+
     The output vector of Ax^m. THe output will be sparse if the input tensor is
     sparse, and dense otherwise. When the output is second order, and A is
     sparse, then the output will be a sparse matrix.
@@ -632,12 +662,15 @@ time.
 Inputs
 ------
 * A -(SSSTensor):
+
     The tensor to contract.
 * x - (Array{Number,1}):
+
     A vector of numbers to contract with.
 Outputs
 -------
 * y - (Array{Number,1}):
+
     The output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
 function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
@@ -705,15 +738,18 @@ vector contraction routines.
 Input:
 ------
 * indices -(Array{Int,1}):
+
   The indices associated with the hyper edge.
 
 Output:
 -------
 * multinomial_factor - (Int)
+
    The number of non-zeros this edge represents in the original tensor.
 
 Note
 ----
+
 TODO: Change to include tuples too.
 -----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
@@ -749,13 +785,16 @@ resorted.
 Input:
 ------
 * A - (SSSTensor)
+
     The tensor to apply the permutation to.
 * p - (Array{Int,1})
+
     The permutation array, where p[i] = j implies that vertex j is mapped to
     index i.
 Note:
 -----
-  Originally planned to be named permute!, but Base.permute! must be overloaded
+
+ Originally planned to be named permute!, but Base.permute! must be overloaded
 -----------------------------------------------------------------------------"""
 function permute_tensor!(A::SSSTensor,p::Array{Int,1})
   @assert length(p) == A.cubical_dimension
@@ -803,12 +842,15 @@ when given an empty list of hyperedges.
 Input:
 ------
 * A - (SSSTensor)
+
     The tensor to produce a subtensor from.
 * indices - (Array{Int,1} or Set{Int})
+
     The indices to build a subtensor from.
 Output:
 -------
 * sub_tensor - (SSSTensor)
+
     The subtensor of A which only contains the hyperedges of A which all include
     each index in indices.
 -----------------------------------------------------------------------------"""
@@ -857,27 +899,35 @@ tolerance.
 Input:
 ------
 * A - (SSSTensor or Array{Number,k})
+
     The symmetric tensor to compute the eigenvector of. Functions are
     overloaded to handle appropriate type.
 * x0 - (Array{Number,1})
+
     The initial starting point for solving the dynamical system.
 * h - (Float64)
+
     The step size for running the forward Euler scheme.
 * tol - (Float64)
+
     The tolerance to solve the dynamical system up to, stops when
     norm(dxdt) < tol.
 * m - (Int)
+
     The eigenvector to find when computing the dynamical system. Default is the
     largest eigenvector of the matrix.
 * update - (Int)
+
     Indicates how many steps the program should update the user by, default
     value is 0.
 
 Output:
 -------
 * x - (Array{Number,1}
+
     The resulting eigenvector computed by the dynamical system method.
 * lambda - (Number)
+
     The resulting eigenvalue computed by the dynamical system method.
 -----------------------------------------------------------------------------"""
 function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
@@ -950,24 +1000,31 @@ maximum iteration.
 Input:
 ------
 * A - (SSSTensor):
+
     An instance of the super symmetric tensor class.
 * x_0 - (Array{Number,1}):
+
     An initial vector to start the algorithm with.
 * shift - (Number)
+
     The shift for the algorithm, can be predetermined to ensure convergence of
     the method.
 * max_iter - (Int)
+
     The maximum number of iterations to run the routine for, prints a warning if
     the method hasn't converged by then.
 * tol - (Float)
+
     The tolerance in difference between subsequent approximate eigenvalues to
     solve the routine up to.
 
 Output:
 -------
 * z - (Array{Number,1})
+
     The final vector produced by the SSHOPM routine.
 * lambda_k - (Number)
+
     The final approximate eigenvalue at the last iteration.
 -----------------------------------------------------------------------------"""
 function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
@@ -1020,13 +1077,16 @@ computed with the frobenius norm.
 Input:
 ------
 * A - (SSSTensor):
+
     An instance of a super symmetric tensor class.
 * use_fro - (bool):
+
     Indicates whether or not to use the frobenius norm.
 
 Output:
 -------
 * shift_bound - (Float)
+
     A float indicating the lower bound for which the method is guaranteed to
     converge.
 -----------------------------------------------------------------------------"""
@@ -1051,16 +1111,21 @@ each vertex, and an array which stores the visting order.
 Input:
 ------
 * A - (SSSTensor)
+
     The tensor to find the conncected components of.
 * v0 - (Int)
+
     Optional starting vertex of bfs tree, default will be 1.
 Output:
 -------
 * component_assignment - (Array{Int,1})
+
     The array storing the components each vertex belongs too.
 * component_sizes - (Array{Int,1})
+
     An array which keeps track of the size of each component.
 * visting_order - (Array{Int,1})
+
     The order the vertices were visited in, used for permuting into block
     diagonal structures.
 -----------------------------------------------------------------------------"""
@@ -1124,11 +1189,13 @@ edges associated with that edge.
  Input:
  ------
 * A - (SSSTensor)
+
     The tensor to find the hyper edge association of.
 
  Output:
  -------
 * edge_incidence - (Dict{Int,Set{Tuple{Array{Int,1},Number}},1})
+
     The dictionary which links all vertices to the hyper edges they're contained
     within.
 -----------------------------------------------------------------------------"""
