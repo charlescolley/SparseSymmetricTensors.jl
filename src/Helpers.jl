@@ -10,6 +10,7 @@
     * string_as_varname_function - ()
     * matrix_to_dictionary - ()
     * reduce_edges - ()
+    * parse - ()
 
 ------------------------------------------------------------------------------=#
 

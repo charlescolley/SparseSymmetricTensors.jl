@@ -20,22 +20,22 @@
 #=------------------------------------------------------------------------------
 						           File I/O
 ------------------------------------------------------------------------------=#
-#=------------------------------------------------------------------------------
+"""-----------------------------------------------------------------------------
     save(A, filepath)
 
-    Saves the the file in the desired location as a ssten file.  The ssten file
+  Saves the the file in the desired location as a ssten file. The ssten file
   format is a generalization of the smat format to the sparse symmetric tensor
   case.  The first line of the file is tab separated line indicated the order of
   the tensor, the cubical dimension, and the number of unique non-zeros in the
-  symmetric tensor all stored as ints:
+  symmetric tensor all stored in that order, as ints:
 
-      (order::Int)\t(cubical_dimension::Int)\t(non-zero count)\n  .
+      (order::Int)\\t(cubical_dimension::Int)\\t(non-zero count)\\n  .
 
   The subsequent lines are tab separated lines which store the unique non-zeros
   which occur in the tensor. Each line contains the indices of the hyperedge in
   sorted order as ints, and the weight as a floating point number:
 
-      (v_{i_1}::Int)\t...(v_{i_k}::Int)\t(edgeweight::Float)\n  .
+      '(v_{i_1}::Int)\\t...(v_{i_k}::Int)\\t(edgeweight::Float)\\n'  .
 
   If the filepath doesn't end in ".ssten", it will be appended to the filepath.
 
@@ -46,7 +46,7 @@
 
   * filepath - (string):
     The location to save the file.
------------------------------------------------------------------------------=#
+----------------------------------------------------------------------------"""
 function save(A::SSSTensor, filepath::String)
     file = open(filepath, "w")
 
@@ -65,18 +65,45 @@ function save(A::SSSTensor, filepath::String)
 	close(file)
 end
 
-function load(filepath::String)
+"""-----------------------------------------------------------------------------
+    load(filepath,NoChecks)
+
+  Loads in a sparse symmetric tensor from a .ssten file. See save for expected
+  .ssten file formatting specifications.
+
+  Inputs:
+  -------
+  * filepath - (String):
+    The .ssten file to load from. Throws an error if not .ssten formatting.
+  * enforceFormatting - (Optional Bool):
+    Sorts each of the hyperedge indices before storing them. Can be used as a
+    quick fix for a improperly formatted file. Not recommended as it will add
+    to memory usage and run time.
+
+  Outputs:
+  --------
+  * A - (SSSTensor):
+    The Sparse symmetric tensor stored in the file.
+-----------------------------------------------------------------------------"""
+function load(filepath::String,enforceFormatting::Bool=False)
 	#check path validity
 	@assert filepath[end-5:end] == ".ssten"
 
-    file = load(filepath)
-	#preallocate from the header line
-	order, n, m = split(chomp(readline(f)),'\t')
+    load(filepath) do file
+		#preallocate from the header line
+		order, n, m =
+			[parse(Int,elem) for elem in split(chomp(readline(f)),'\t')]
 
-	non_zeros = Array{Float64,1}(undef, m)
+		hyperedges =
+		  Array{Tuple{SVector{order,Float64},Float64},1}(undef, m)
 
-
-
+		for line in eachline(file)
+			entries = split(chomp(line),'\t')
+			hyperedges[i] = ([parse(Int,elem) for elem in entries[end-1]],
+			   				 parse(Float64,entries[end]))
+		end
+	end
+	SSSTensor(hyperedges)
 end
 
 #=------------------------------------------------------------------------------

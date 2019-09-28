@@ -1,21 +1,20 @@
+module SSTen
 #=------------------------------------------------------------------------------
    Main File of the COOTensor class, Only type definitions and Constructor
    functions should be placed here.
 ------------------------------------------------------------------------------=#
-
-
-module SSSTensor1
 
 using Base.Cartesian
 using Printf
 using SparseArrays
 using DataStructures
 using StaticArrays
-#import MatrixNetworks.triangles_iterator
+
 import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
 import Arpack.eigs
 
+#TODO: refactor to make class COOTen
 
 #TODO: SSSTensor([i,j,k]) returns abnormal result, this should be altered to set
 # default hyperedge weight to 1.
@@ -26,6 +25,7 @@ import Arpack.eigs
 #TODO: possible to condense constructor definitions with default params
 #TODO: Remove triangles_iterator constructor
 
+
 mutable struct SSSTensor
   edges::Dict{Array{Int,1},Number}
   cubical_dimension::Int
@@ -34,11 +34,13 @@ mutable struct SSSTensor
     SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
     # Need to adjust the error message on this constructor
 
+  #Edge List constructor
   function SSSTensor(e)
     n = SSSTensor_verifier(e)
     new(reduce_edges(e),n)
   end
 
+  #Dense tensor constructor
   function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: Number,k}
 
     if any(size(A) .> n)

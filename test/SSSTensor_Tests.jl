@@ -1,16 +1,5 @@
-using Test
-#using MATLAB
-#using SSST
-include("../src/SSSTensor.jl")
-
-
-n = 5
 
 @testset "Contructor Tests" begin
-
-valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
-unordered_edge = [([2,3,1],1.0)]
-negative_index = [([-1,2,3],1.0)]
 
 @testset "Hyperedge List Constructor" begin
     @test_throws ErrorException SSSTensor(unordered_edge) #unsorted indices
