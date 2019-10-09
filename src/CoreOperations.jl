@@ -69,7 +69,9 @@ end
     load(filepath,NoChecks)
 
   Loads in a sparse symmetric tensor from a .ssten file. See save for expected
-  .ssten file formatting specifications.
+  .ssten file formatting specifications. The routine will check to see if the
+  vertex indices are 0 indexed or not, and will increment each by 1 if it is to
+  adhere to Julia's use of indexing by 1.
 
   Inputs:
   -------
@@ -85,25 +87,42 @@ end
   * A - (SSSTensor):
     The Sparse symmetric tensor stored in the file.
 -----------------------------------------------------------------------------"""
-function load(filepath::String,enforceFormatting::Bool=False)
+function load(filepath::String,enforceFormatting::Bool=false)
 	#check path validity
 	@assert filepath[end-5:end] == ".ssten"
 
-    load(filepath) do file
+    open(filepath) do file
 		#preallocate from the header line
 		order, n, m =
-			[parse(Int,elem) for elem in split(chomp(readline(f)),'\t')]
+			[parse(Int,elem) for elem in split(chomp(readline(file)),'\t')]
 
-		hyperedges =
-		  Array{Tuple{SVector{order,Float64},Float64},1}(undef, m)
-
+		hyperedges = Array{Tuple{Array{Int64,1},Float64},1}(undef, m)
+		i = 1
 		for line in eachline(file)
 			entries = split(chomp(line),'\t')
-			hyperedges[i] = ([parse(Int,elem) for elem in entries[end-1]],
+			hyperedges[i] = ([parse(Int,elem) for elem in entries[1:end-1]],
 			   				 parse(Float64,entries[end]))
+			i += 1
 		end
+
+		#check for 0 indexing
+		zero_indexed = false
+
+		for (indices,_) in hyperedges
+			for v_i in indices
+				if v_i == 0
+    				zero_indexed = true
+    				break
+				end
+			end
+		end
+
+		if zero_indexed
+			redo_indexing!(hyperedges)
+		end
+
+		return SSSTensor(hyperedges)
 	end
-	SSSTensor(hyperedges)
 end
 
 #=------------------------------------------------------------------------------
@@ -172,6 +191,10 @@ Input:
 * indices - (Array{Int,1} or Set{Int})
 
     The indices to build a subtensor from.
+* remap - (optional bool)
+
+    Indicates whether or not to remap the vertices from 1 to length(indices).
+  Useful if the desired subtensor is to be used as a standalone tensor.
 Output:
 -------
 * sub_tensor - (SSSTensor)
@@ -179,7 +202,8 @@ Output:
     The subtensor of A which only contains the hyperedges of A which all include
     each index in indices.
 -----------------------------------------------------------------------------"""
-function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},Set{Int}}
+function get_sub_tensor(A::SSSTensor,indices::T,
+                        remap::Bool=false) where T <: Union{Array{Int,1},Set{Int}}
   @assert 0 < length(indices) <= A.cubical_dimension
   @assert all(indices .> 0)
 
@@ -188,14 +212,12 @@ function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},S
   end
 
   incident_edges = find_edge_incidence(A)
-  println(typeof(indices))
   sub_tensor_edges = Array{Tuple{Array{Int,1},Number}}(undef,0)
 
   for v_i in indices
     for (V,val) in get(incident_edges,v_i,[])
 	  edge = (V,val)
 	  #only include edge if all indices in hyperedge are desired
-	  println(indices,V)
 	  if all(x -> x in indices,V)
 	    push!(sub_tensor_edges,edge)
       end
@@ -205,7 +227,11 @@ function get_sub_tensor(A::SSSTensor,indices::T) where T <: Union{Array{Int,1},S
 	  end
 	end
   end
-  println(sub_tensor_edges)
+
+  if remap
+	remap_indices!(sub_tensor_edges)
+  end
+
   SSSTensor(sub_tensor_edges)
 end
 

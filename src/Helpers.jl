@@ -11,9 +11,11 @@
     * matrix_to_dictionary - ()
     * reduce_edges - ()
     * parse - ()
+    * redo_indexing - ()
+    * remap_indices - ()
+
 
 ------------------------------------------------------------------------------=#
-
 
 """-----------------------------------------------------------------------------
     reduce_dictionaries!(D1,D2)
@@ -197,4 +199,42 @@ function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
         end
     end
     return edge_dict
+end
+
+"""-----------------------------------------------------------------------------
+    redo_indexing!(hyperedges)
+
+  rewrites the indices in the hyper edges to index from 1 instead of 0.
+-----------------------------------------------------------------------------"""
+function redo_indexing!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+    order = length(hyperedges[1][1])
+
+    for i = 1:length(hyperedges)
+        for j = 1:order
+            hyperedges[i][1][j] += 1
+        end
+    end
+end
+
+"""-----------------------------------------------------------------------------
+    remap_indices!(hyperedges)
+
+  rewrites the vertices indices in the
+-----------------------------------------------------------------------------"""
+function remap_indices!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+    order = length(hyperedges[1][1])
+
+    new_id = 1
+    remapping_dict = Dict()
+
+    for i =1:length(hyperedges)
+
+        for j =1:order
+            if !haskey(remapping_dict,hyperedges[i][1][j])
+                remapping_dict[hyperedges[i][1][j]] = new_id
+                new_id += 1
+            end
+            hyperedges[i][1][j] = remapping_dict[hyperedges[i][1][j]]
+        end
+    end
 end
