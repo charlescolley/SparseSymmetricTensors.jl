@@ -75,7 +75,7 @@ function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
 	#x /= norm(x)
 
 	if norm(dxdt) <= tol
-      return x, x'*A_x_k_2*x
+      return x, x'*A_x_k_2*x , step
     else
       x += h*dxdt
     end
@@ -152,6 +152,9 @@ Output:
 * lambda_k - (Number)
 
     The final approximate eigenvalue at the last iteration.
+* iterations - (Integer)
+
+    The number of iterations the algorithm ran for.
 -----------------------------------------------------------------------------"""
 function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
                 N <: Number
@@ -177,14 +180,14 @@ function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
         z /= norm(z)
 
         iterations += 1
-        @show z
-        @printf("lambda_k = %f\n",lambda_k)
-        @printf("lambda diff = %f\n",abs(lambda_k - lambda_k_1))
+#        @show z
+#        @printf("lambda_k = %f\n",lambda_k)
+#        @printf("lambda diff = %f\n",abs(lambda_k - lambda_k_1))
         if abs(lambda_k - lambda_k_1) < tol || iterations >= max_iter
             if iterations >= max_iter
                 @warn("maximum iterations reached")
             end
-            return z, lambda_k
+            return z, lambda_k, iterations
         else
             lambda_k_1 = lambda_k
             x = z

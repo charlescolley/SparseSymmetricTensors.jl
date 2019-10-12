@@ -50,7 +50,7 @@
 function save(A::SSSTensor, filepath::String)
     file = open(filepath, "w")
 
-    header = "\t$(order(A))\t$(A.cubical_dimension)\t(length(A.edges))\n"
+    header = "$(order(A))\t$(A.cubical_dimension)\t$(length(A.edges))\n"
     write(file,header);
 
     for (edge,weight) in A.edges
