@@ -23,10 +23,11 @@ tolerance.
 
 Input:
 ------
-* A - (SSSTensor or Array{Number,k})
+* A - (SSSTensor or Array{Number,k > 2})
 
-    The symmetric tensor to compute the eigenvector of. Functions are
-    overloaded to handle appropriate type.
+    The symmetric tensor to compute the eigenvector of. Dense tensors have
+    limited support, primary support is for constructors to the sparse cases.
+
 * x0 - (Array{Number,1})
 
     The initial starting point for solving the dynamical system.

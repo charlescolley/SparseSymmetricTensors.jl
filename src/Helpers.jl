@@ -4,6 +4,7 @@
 
   Operations Glossary
   -------------------
+    * alterfilename - ()
     * reduce_dictionaries - ()
     * multiplicity_factor - ()
     * add_perm! - ()
@@ -13,9 +14,21 @@
     * parse - ()
     * redo_indexing - ()
     * remap_indices - ()
+    *
 
 
 ------------------------------------------------------------------------------=#
+"""-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------"""
+function alterFilename(s::String,insert::String;
+                       delimiter::String=".", keep_postfix::Bool=true)
+    suffix,postfix = split(s,delimiter)
+    if keep_postfix
+        return suffix * insert * delimiter * keep_postfix
+    else
+        return suffix * insert
+    end
+end
 
 """-----------------------------------------------------------------------------
     reduce_dictionaries!(D1,D2)
@@ -236,5 +249,6 @@ function remap_indices!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: N
             end
             hyperedges[i][1][j] = remapping_dict[hyperedges[i][1][j]]
         end
+        sort!(hyperedges[i][1])
     end
 end

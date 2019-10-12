@@ -176,7 +176,7 @@ indices associated along with a count of the non-zeros.
 end
 
 """-----------------------------------------------------------------------------
-    get_sub_tensor(A,indices)
+    get_sub_tensor(A,indices,remap=false)
 
   This function produced a subtensor which only containes the vertices specified
 in the array indices. Note that there must be hyper edges shared between the
@@ -202,7 +202,7 @@ Output:
     The subtensor of A which only contains the hyperedges of A which all include
     each index in indices.
 -----------------------------------------------------------------------------"""
-function get_sub_tensor(A::SSSTensor,indices::T,
+function get_sub_tensor(A::SSSTensor,indices::T;
                         remap::Bool=false) where T <: Union{Array{Int,1},Set{Int}}
   @assert 0 < length(indices) <= A.cubical_dimension
   @assert all(indices .> 0)

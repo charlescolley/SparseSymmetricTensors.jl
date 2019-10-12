@@ -1,4 +1,4 @@
-module SSTen
+module ssten
 #=------------------------------------------------------------------------------
    Main File of the COOTensor class, Only type definitions and Constructor
    functions should be placed here.
@@ -59,7 +59,7 @@ mutable struct SSSTensor
 end
 
 # Include the files from the other functions
-include("Helpers.jl")
+include("Helpers.jl") # makes helpers accessible to other files
 include("CoreOperations.jl")
 include("HyperGraphAlgos.jl")
 include("NumericalRoutines.jl")

@@ -123,6 +123,76 @@ function connected_components(A::SSSTensor,v0::Int = 1)
 
   return component_assignment, component_sizes, visiting_order
 end
+"""-----------------------------------------------------------------------------
+    get_largest_component(A,filepath)
+
+  Computes the largest connected component (lcc) of the hypergraph. Will either
+  compute it directly or load/save it it from/to an lcc file built from the
+  filepath. The filepath's postfix is replaced from a .lcc of the formatting
+
+  (largest_component_size::Int)\t(total vertex count::Int)\n
+  (vertex_index_1::Int)\n
+            ⋮
+  (vertex_index_n::Int)\n
+
+Inputs:
+-------
+* A - (SSSTensor)
+  The hypergraph adjacency tensor to find the largest component of.
+* filepath - (Optional String)
+  The .ssten filepath associated with the tensor, if passed in, then .lcc files
+  are created so that the largest connected component need not be computed
+  multiple times.
+
+Outputs:
+--------
+* subtensor - (SSSTensor)
+  The subtensor associated with the largest component of the orignal hypergraph.
+  Vertices are remapped so that they're indexed from 1:sizeof(lcc)
+* lcc_indices - (Array{Int,1})
+  Array with the indices of the vertices from the original graph which comprise
+  the largest connected component.
+-----------------------------------------------------------------------------"""
+function get_largest_component(A::SSSTensor,filepath::String="")
+
+    if !isempty(filepath) #if path is passed in, look for lcc file
+    	lcc_file = alterFilename(filepath,".lcc",keep_postfix=false)
+    	if isfile(lcc_file)
+    		open(lcc_file, "r") do f
+				println("opened lcc file")
+				lcc_size = parse(Int,split(chomp(readline(f)),'\t')[1])
+				lcc_indices = Array{Int,1}(undef,lcc_size)
+
+				for (i,line) in zip(1:lcc_size,eachline(f))
+				  lcc_indices[i] = parse(Int,chomp(line))
+				end
+			end
+			println("right before return")
+			return get_sub_tensor(A,lcc_indices,remap=true),lcc_indices
+			println("made it")
+		end
+	end
+
+	comps, comp_sizes, _ = connected_components(A)
+
+	if length(comp_sizes) > 1
+		largest_comp = findall(x->x==maximum(comp_sizes),comp_sizes)[1]
+		lcc_indices = findall(x->x==largest_comp,comps)
+	end
+
+	if !isempty(filepath) #save lcc file if one doesn't exist
+		lcc_file = alterFilename(filepath,".lcc",keep_postfix=false)
+		open(lcc_file,"w") do f
+			println("opened file $(lcc_file)")
+			header="$(length(lcc_indices))\t$(A.cubical_dimension)\n"
+			write(f,header)
+			for v_i in lcc_indices
+				write(f,"$(v_i)\n")
+			end
+		end
+	end
+	get_sub_tensor(A,lcc_indices,remap=true),lcc_indices
+end
 
 """-----------------------------------------------------------------------------
     find_edge_incidence(A)
