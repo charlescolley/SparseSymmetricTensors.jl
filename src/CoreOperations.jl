@@ -307,3 +307,44 @@ function dense(A::SSSTensor)
     return B
 end
 
+#UNTESTED
+"""-----------------------------------------------------------------------------
+    flatten(A,colIndex)
+
+  This function returns a sparse matrix from flattening k-2 modes into the
+  columns of the matrix.  Defaults to col major formatting.
+
+  TODO: add colIndex function to parameters.
+
+Inputs:
+-------
+* A - (SSSTensor)
+
+    The sparse tensor to be converted.
+*
+Output:
+-------
+* B - (Array{Number,k})
+
+    The corresponding dense tensor representation of A.
+-----------------------------------------------------------------------------"""
+function flatten(A::SSSTensor)
+
+	edge_count = length(A.edges)
+
+	I = Array{Int,1}(undef,edge_count)
+	J = Array{Int,1}(undef,edge_count)
+	V = Array{Float64,1}(undef,edge_count)
+
+
+	for (i,(indices,val)) in zip(1:edge_count,A.edges)
+        I[i] = indices[1]
+		V[i] = val
+
+		#adjust back to 0 indexing
+		J[i] = foldl((x,y)-> x+A.cubical_dimension*(y-1),indices[2:end])
+
+	end
+
+	return sparse(I,J,V)
+end
