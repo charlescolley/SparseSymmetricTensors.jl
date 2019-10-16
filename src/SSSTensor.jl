@@ -61,6 +61,7 @@ end
 # Include the files from the other functions
 include("Helpers.jl") # makes helpers accessible to other files
 include("CoreOperations.jl")
+include("Contractions.jl")
 include("HyperGraphAlgos.jl")
 include("NumericalRoutines.jl")
 
