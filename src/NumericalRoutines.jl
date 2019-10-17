@@ -93,6 +93,8 @@ function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
   end
 end
 
+
+
 #figure out if it's faster to do an internal check than two overloaded functions
 
 function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
@@ -228,3 +230,8 @@ function find_shift_for_convergence(A::SSSTensor)
 
 end
 
+function HOSVD(A::SSSTensor,k::Int)
+
+
+
+end

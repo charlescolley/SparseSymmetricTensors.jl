@@ -330,21 +330,25 @@ Output:
 -----------------------------------------------------------------------------"""
 function flatten(A::SSSTensor)
 
-	edge_count = length(A.edges)
+	ord = order(A)
+	nnz = length(A.edges)*factorial(ord)
+	I = Array{Int,1}(undef,nnz)
+	J = Array{Int,1}(undef,nnz)
+	V = Array{Float64,1}(undef,nnz)
 
-	I = Array{Int,1}(undef,edge_count)
-	J = Array{Int,1}(undef,edge_count)
-	V = Array{Float64,1}(undef,edge_count)
+	i = 0
+	for (edge,val) in A.edges
 
+		for indices in unique(permutations(edge))
+			i+=1
+			I[i] = indices[1]
+			V[i] = val
 
-	for (i,(indices,val)) in zip(1:edge_count,A.edges)
-        I[i] = indices[1]
-		V[i] = val
+			#adjust back to 0 indexing
+			J[i] = foldl((x,y)-> x+A.cubical_dimension*(y-1),indices[2:end])
 
-		#adjust back to 0 indexing
-		J[i] = foldl((x,y)-> x+A.cubical_dimension*(y-1),indices[2:end])
-
+		end
 	end
 
-	return sparse(I,J,V)
+	return SparseArrays.sparse(I[1:i],J[1:i],V[1:i],A.cubical_dimension,A.cubical_dimension^(ord-1))
 end
