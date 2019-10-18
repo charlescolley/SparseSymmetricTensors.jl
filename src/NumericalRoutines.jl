@@ -230,8 +230,24 @@ function find_shift_for_convergence(A::SSSTensor)
 
 end
 
+"""-----------------------------------------------------------------------------
+    HOSVD(A,k)
+
+  Returns the top k singular vectors and values of the Higher Order SVD.
+
+ Notes:
+ ------
+ Currently outputs the left singular vectors and values from the flattened
+ tensor. More functionality can be added in, but the current use case is for the
+ starting vectors for the SSHOPM.
+
+TODO: would be better to create a adjoint matvec operation from some variant of
+  the contraction
+
+-----------------------------------------------------------------------------"""
 function HOSVD(A::SSSTensor,k::Int)
 
-
+	(U,S,_),_ = svds(flatten(A),nsv=k)
+	return U,S
 
 end

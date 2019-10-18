@@ -12,7 +12,7 @@ using StaticArrays
 
 import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
-import Arpack.eigs
+import Arpack.eigs, Arpack.svds
 
 #TODO: refactor to make class COOTen
 
