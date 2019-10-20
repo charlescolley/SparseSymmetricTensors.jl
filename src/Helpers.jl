@@ -97,6 +97,35 @@ function multiplicity_factor(indices::Array{Int,1})
     return multinomial(final_counts...)
 end
 
+"""-----------------------------------------------------------------------------
+    nnz_count(indices)
+
+  Computes the number of non-zeros found in the symmetric tensor.
+
+Input:
+------
+* indices -(Array{Int,2}):
+
+  An array with all the indices of the hyper edges found in the tensor.
+
+Output:
+-------
+* nnz_count - (Int)
+
+   The number of non-zeros in the original tensor.
+
+-----------------------------------------------------------------------------"""
+function nnz_count(indices::Array{Int,2})
+
+    nnz_coutn = 0
+    edge_count, _  = size(indices)
+    for i =1:edge_count
+        nnz_count += multiplicity_factor(indices[i,:])
+    end
+
+    nnz_count
+end
+
 """
 helper function for testing and adding in the permutation as an edge into the
 dictionary used to build the symmetric tensor from the

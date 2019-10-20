@@ -21,4 +21,5 @@ include("../src/SSSTensor.jl")
     @assert LinearAlgebra.norm(ssten.contract(A,x,2) -kron_mul)/LinearAlgebra.norm(kron_mul) < tol
   end
 
+
 end

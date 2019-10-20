@@ -285,6 +285,104 @@ function contract_multi(A::SSSTensor, Vs::Array{N,2}) where N <: Number
   end
 end
 
+#TODO: make this take in an arbitrary number of vectors.
 function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: Number
   return contract_multi(A,hcat(v,u))
 end
+
+
+"""-----------------------------------------------------------------------------
+    contract_k_1(A(type needs to be determined),x,k)
+
+  Contracts the vector x with the tensor to all but one mode
+
+-----------------------------------------------------------------------------"""
+function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n,
+                      x::Array{N,1}) where N <: Number
+
+	rows, ord = size(indices)
+
+	y = zeros(n) #resulting vector
+
+	for i=1:rows
+		contract_edge_k_1!(indices[i,:],nnz[i],x,y)
+	end
+
+	return y
+end
+
+"""-----------------------------------------------------------------------------
+    contract_k_1!(A(type needs to be determined),x,k,y)
+
+  Contracts the vector x with the tensor to all but one mode and saves the
+  resulting vector in the passed in y.
+
+-----------------------------------------------------------------------------"""
+function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
+                      x::Array{N,1},y::Array{N,1}) where N <: Number
+
+	rows, ord = size(indices)
+
+	for i=1:rows
+		contract_edge_k_1!(indices[i,:],nnz[i],x,y)
+	end
+end
+
+"""-----------------------------------------------------------------------------
+    contract_edge_k_1!(indices,val,x,res)
+
+  This function computes the value of contracting one hyper edge with an input
+vector x to all but 1 mode, and saves the result in the appropriate locations
+in res.
+
+Inputs:
+-------
+* indices - (Array{Int,2}):
+
+    2D array with all the indices of the hyper edges in the tensor. Note that
+    the number of rows is not necesarily equal to the non-zeros in the tensors.
+    The indices of each row is assumed to be sorted in increasing order.
+* nnz_val -  (N <: Number):
+
+    The non-zero associated with the hyper edges.
+* x - (Array{N <: Number, 1}):
+
+    The vector to contract the hyper edge with.
+* res_val - (Array{N <:Number, 1}):
+
+    The location to update the solution to. res is assumed to be initialized and
+    so the values are simply added to the entries of y, this is done because
+    this function is considered a helper function to the contract function o
+    verloaded for the dense array representation of symmetric tensors.
+-----------------------------------------------------------------------------"""
+function contract_edge_k_1!(indices::Array{Int,1},nnz_val::N,
+                            x::Array{N,1},res::Array{N,1}) where N <: Number
+
+    ord = size(indices)[1]
+
+	prev_index = -1
+	sub_edge = Array{Int,1}(undef,ord -1)
+	for j =1:ord
+		#only compute contraction once per index
+		if prev_index != indices[j]
+			#form sub_edge
+			i = 1
+			for k=1:ord
+			    if k != j
+    			    sub_edge[i] = indices[k]
+					i+= 1
+			    end
+			end
+
+			val = nnz_val * multiplicity_factor(sub_edge)
+			for k in sub_edge
+				val *= x[k]
+			end
+			res[indices[j]] += val
+		end
+		prev_index = indices[j]
+	end
+
+
+end
+
