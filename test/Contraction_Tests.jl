@@ -5,7 +5,7 @@ import LinearAlgebra.norm
 include("../src/SSSTensor.jl")
 
  n = 3
- ord = 3
+ ord = 5
  tol = 1e-9
  nnz = 4
 
@@ -24,7 +24,7 @@ include("../src/SSSTensor.jl")
     dictTen_contract = ssten.contract(A,x,ord-1)
     matTen_contract = ssten.contract_k_1(indices,vals,n,x)
 
-    @assert norm(dictTen_contract - matTen_contract)/norm(matTen_contract)< tol
+    @test norm(dictTen_contract - matTen_contract)/norm(matTen_contract)< tol
   end
 
   @testset "in place low mem contraction tests" begin
@@ -41,6 +41,6 @@ include("../src/SSSTensor.jl")
     matTen_contract = zeros(n)
     ssten.contract_k_1!(indices,vals,x,matTen_contract)
 
-    @assert norm(dictTen_contract - matTen_contract)/norm(matTen_contract)< tol
+    @test norm(dictTen_contract - matTen_contract)/norm(matTen_contract)< tol
   end
 end

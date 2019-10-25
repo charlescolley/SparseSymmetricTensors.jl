@@ -317,11 +317,18 @@ end
   Contracts the vector x with the tensor to all but one mode and saves the
   resulting vector in the passed in y.
 
+TODO: add assertion checks
 -----------------------------------------------------------------------------"""
 function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
                       x::Array{N,1},y::Array{N,1}) where N <: Number
 
 	rows, ord = size(indices)
+	n = size(y)[1]
+
+	#initialize the output vector to all zeros
+	for i=1:n
+		y[i] = 0.0
+	end
 
 	for i=1:rows
 		contract_edge_k_1!(indices[i,:],nnz[i],x,y)
