@@ -97,12 +97,14 @@ function load(filepath::String,enforceFormatting::Bool=false)
 			[parse(Int,elem) for elem in split(chomp(readline(file)),'\t')]
 
 		hyperedges = Array{Tuple{Array{Int64,1},Float64},1}(undef, m)
-		i = 1
+
+		i = 0
 		for line in eachline(file)
-			entries = split(chomp(line),'\t')
-			hyperedges[i] = ([parse(Int,elem) for elem in entries[1:end-1]],
-			   				 parse(Float64,entries[end]))
 			i += 1
+			entries = split(chomp(line),'\t')
+
+			hyperedges[i] = ([parse(Int,elem) for elem in entries[1:end-1]],
+			                 parse(Float64,entries[end]))
 		end
 
 		#check for 0 indexing
@@ -120,10 +122,85 @@ function load(filepath::String,enforceFormatting::Bool=false)
 		if zero_indexed
 			redo_indexing!(hyperedges)
 		end
-
 		return SSSTensor(hyperedges)
 	end
 end
+
+
+"""-----------------------------------------------------------------------------
+    lowMemLoad(filepath)
+
+  Loads in the components of a sparse symmetric tensor from a .ssten file.
+  Useful when memory contraints restrict using dictionaries for the core data
+  structure for the hyperedges. The routine will check to see if the vertex
+  indices are 0 indexed or not, and will increment each by 1 if it is to
+  adhere to Julia's use of indexing by 1.
+
+  Inputs:
+  -------
+  * filepath - (String):
+    The .ssten file to load from. Throws an error if not .ssten formatting.
+
+  Outputs:
+  --------
+  * indices - (Array{Int,2}):
+    The indices of the hyper edges, rows are expected to be sorted in ascending
+    order from the ssten format.
+  * vals - (Array{Float64,1}):
+    The values for each hyperedge, the ith row of vals corresponds to the ith
+    row of indices.
+  * n - (Int):
+    The cubical dimension of the tensor, found in the .ssten file.
+
+  Notes:
+  ------
+  * See save for expected .ssten file formatting specifications.
+-----------------------------------------------------------------------------"""
+function lowMemLoad(filepath::String)
+
+	#check path validity
+	@assert filepath[end-5:end] == ".ssten"
+
+    open(filepath) do file
+		#preallocate from the header line
+		order, n, m =
+			[parse(Int,elem) for elem in split(chomp(readline(file)),'\t')]
+
+		indices = Array{Int,2}(undef,m,order)
+		vals = Array{Float64,1}(undef,m)
+
+		i = 0
+		for line in eachline(file)
+			i += 1
+			entries = split(chomp(line),'\t')
+
+			indices[i,:] = [parse(Int,elem) for elem in entries[1:end-1]]
+			vals[i] = parse(Float64,entries[end])
+
+		end
+
+		#check for 0 indexing
+		zero_indexed = false
+
+		for row = 1:i
+			for col=1:order
+				if indices[row,col] == 0
+    				zero_indexed = true
+    				break
+				end
+			end
+		end
+
+		indices = indices[1:i,:] #truncate array
+
+		if zero_indexed
+			n += 1
+			indices += ones(i,order)
+		end
+		return indices, vals, n
+	end
+end
+
 
 #=------------------------------------------------------------------------------
 						           Getters
