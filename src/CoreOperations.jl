@@ -195,9 +195,12 @@ function lowMemLoad(filepath::String)
 
 		if zero_indexed
 			n += 1
-			indices += ones(i,order)
+			indices += ones(Int,i,order)
 		end
-		return indices, vals, n
+
+		#TODO: There's a problem with this routine, or perhaps the saving routine.
+
+		return indices, vals, maximum(indices)
 	end
 end
 
