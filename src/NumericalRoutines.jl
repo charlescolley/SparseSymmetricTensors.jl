@@ -185,6 +185,7 @@ function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
 #        @show z
 #        @printf("lambda_k = %f\n",lambda_k)
 #        @printf("lambda diff = %f\n",abs(lambda_k - lambda_k_1))
+		residual = z*lambda_k -
         if abs(lambda_k - lambda_k_1) < tol || iterations >= max_iter
             if iterations >= max_iter
                 @warn("maximum iterations reached")
@@ -197,6 +198,86 @@ function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
     end
 end
 
+"""-----------------------------------------------------------------------------
+    SSHOPM(indices,vals,n,x_0,shift,max_iter,tol)
+
+  This function runs a low memory usage shifted symmetric higher order power
+method for a super symmetric tensor with the passed in shift, up to a tolerance
+or up until a maximum iteration.
+
+TODO: update to new SSSTensor class
+Input:
+------
+* indices - (Array{Int,2}):
+
+    Indices associated with
+* x_0 - (Array{Number,1}):
+
+    An initial vector to start the algorithm with.
+* shift - (Number)
+
+    The shift for the algorithm, can be predetermined to ensure convergence of
+    the method.
+* max_iter - (Int)
+
+    The maximum number of iterations to run the routine for, prints a warning if
+    the method hasn't converged by then.
+* tol - (Float)
+
+    The tolerance in difference between subsequent approximate eigenvalues to
+    solve the routine up to.
+
+Output:
+-------
+* z - (Array{Number,1})
+
+    The final vector produced by the SSHOPM routine.
+* lambda_k - (Number)
+
+    The final approximate eigenvalue at the last iteration.
+* iterations - (Integer)
+
+    The number of iterations the algorithm ran for.
+-----------------------------------------------------------------------------"""
+function SSHOPM(indices::Array{Int,2},vals::Array{N,1},n::Int, x_0::Array{N,1},
+                shift::N,max_iter,tol) where N <: Number
+
+    x = x_0/norm(x_0)
+    iterations = 0
+	z = Array{N,1}(undef,n)
+    lambda_k_1 = Inf
+
+    while true
+
+		contract_k_1!(indices,vals,x,z)
+        if shift != 0
+
+            z += shift*x
+
+			if shift < 0
+				x *= -1
+			end
+        end
+
+        lambda_k = x'*z
+
+		residual = z - lambda_k*x
+
+        #normalize
+        z /= norm(z)
+        iterations += 1
+
+        if norm(residual) < tol || iterations >= max_iter
+            if iterations >= max_iter
+                @warn("maximum iterations reached")
+            end
+            return z, lambda_k, iterations
+        else
+            lambda_k_1 = lambda_k
+            x = z
+        end
+    end
+end
 
 """-----------------------------------------------------------------------------
     find_shift_for_convergence(A,use_fro)
