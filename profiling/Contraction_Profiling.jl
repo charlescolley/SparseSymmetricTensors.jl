@@ -13,7 +13,7 @@ if !isdir(log_folder)
     mkdir(log_folder)
 end
 
- scales = 1
+ scales = 5
  n_0 = 100000
  ord = 3
  tol = 1e-9
@@ -27,10 +27,12 @@ root_name = log_folder*
 #initialize dictionaries
 Trials = BenchmarkGroup()
 
-#Trials["matSST_contract_k_1"] = BenchmarkGroup()
-Trials["dictSST_contract_k_1"] = BenchmarkGroup()
-#Trials["dictSST_contract"] = BenchmarkGroup()
 
+if false  #fulll contraction tests
+
+Trials["matSST_contract_k_1"] = BenchmarkGroup()
+Trials["dictSST_contract_k_1"] = BenchmarkGroup()
+Trials["dictSST_contract"] = BenchmarkGroup()
 
 for i = 1:scales
     n = n_0^i
@@ -61,16 +63,54 @@ for i = 1:scales
 
 end
 
-#BenchmarkTools.save(root_name*".json", Trials)
+BenchmarkTools.save(root_name*".json", Trials)
+end
 
+
+
+if true  #edge wise contraction operations
+ord_0 = 3
+
+Trials["row_edge_contract_k_1"] = BenchmarkGroup()
+Trials["tuple_contract_k_1"] = BenchmarkGroup()
+Trials["tuple_contract"] = BenchmarkGroup()
+
+n = n_0
+
+for i = 1:scales
+
+
+    ord = ord_0^i
+
+    m = ord -1
+
+    x = rand(n)
+    y = zeros(n)
+
+    indices = rand(1:n,ord)
+    sort!(indices)
+    val = rand()
+
+    e = (indices,val)
+
+    Trials["row_edge_contract_k_1"]["ord:$(ord)"]  = @benchmark ssten.contract_edge_k_1!($indices,$val,$x,$y)
+    Trials["tuple_contract_k_1"]["ord:$(ord)"] =  @benchmark ssten.contract_edge_k_1($e,$x)
+    Trials["tuple_contract"]["ord:$(ord)"] =      @benchmark ssten.contract_edge($e,$x,$m)
+
+    for k in keys(Trials)
+        println("Results for Trial: $(k) for ord = $(ord)")
+        display(Trials[k]["ord:$(ord)"])
+        print("\n")
+    end
+
+end
+
+end
 
 # unprofiled
-#contract_edge(e,x,k)
-#contract_edge_k_1(e,x)
 #contract(A,x,m)
 #contract(A::Array{N,k}, x::Array{M,1},m::Int64)
 #contract_k_1(A::SSSTensor, x::Array{N,1})
 #contract_multi(A::SSSTensor, Vs::Array{N,2})
 #contract(A::SSSTensor,v::Array{N,1},u::Array{N,1})
 #contract_k_1!(indices::Array{Int,2},nnz::Array{N,1}, x::Array{N,1},y::Array{N,1})
-#contract_edge_k_1!(indices::Array{Int,1},nnz_val::N, x::Array{N,1},res::Array{N,1})
