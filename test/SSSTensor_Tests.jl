@@ -1,7 +1,20 @@
 
+using Test
+#using MATLAB
+
+include("../src/SSSTensor.jl")
+using .ssten
+
+
+global n = 5
+global valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
+global unordered_edge = [([2,3,1],1.0)]
+global negative_index = [([-1,2,3],1.0)]
+
 @testset "Contructor Tests" begin
 
 @testset "Hyperedge List Constructor" begin
+
     @test_throws ErrorException SSSTensor(unordered_edge) #unsorted indices
     @test_throws ErrorException SSSTensor(unordered_edge,n)
     @test_throws ErrorException SSSTensor(unordered_edge,1) # too small cubical dim
@@ -12,6 +25,7 @@
 end
 
 @testset "Dense Tensor Constructor" begin
+
     non_sym_tensor = rand(2,2,2,2)
     sym_tensor = ones(2,2,2,2)
     @test_throws ErrorException SSSTensor(non_sym_tensor)
@@ -20,6 +34,7 @@ end
 end
 
 @testset "Dictionary Constructor" begin
+
     D_valid_edges = Dict(valid_edges)
     D_unordered_edge = Dict(unordered_edge)
     D_negative_index = Dict(negative_index)
@@ -31,8 +46,54 @@ end
     @test_throws ErrorException SSSTensor(D_negative_index,1)
     @test_throws ErrorException SSSTensor(D_negative_index,n) #neg index
     @test_throws ErrorException SSSTensor(D_negative_index)
+
 end
 
+@testset "COOTEN" begin
+
+    valid_indices = [1 2 3; 2 2 3; 1 2 4]
+    unsorted_indices = [1 2 3; 2 2 3; 4 2 1]
+    zero_indexed_indices = [1 2 3; 2 2 3; 0 0 0]
+
+    valid_values = [1.0,2.0,3.0]
+
+
+    @testset "COOTEN Constructor" begin
+
+
+        A = ssten.COOTen(indices,rand(3),10)
+        @assert A.cubical_dimension == 10
+
+         A = ssten.COOTen(indices,rand(3))
+        @assert A.cubical_dimension == maximum(indices)
+
+
+        #all params
+        @test_throws ErrorException ssten.COOTen(valid_indices, rand(2),10) #mis-matched dimensions
+        @test_throws ErrorException ssten.COOTen(unsorted_indices, valid_values,10) #unsorted rows
+        @test_throws ErrorException ssten.COOTen(zero_indexed_indices, valid_values,10) #zero indexed
+
+        @test_throws ErrorException ssten.COOTen(zero_indexed_indices,valid_values,2)#invalid cubicaldim
+
+        #without cubical dimension
+        @test_throws ErrorException ssten.COOTen(valid_indices, rand(2)) #mis-matched dimensions
+        @test_throws ErrorException ssten.COOTen(unsorted_indices, valid_values) #unsorted rows
+        @test_throws ErrorException ssten.COOTen(zero_indexed_indices, valid_values) #zero indexed
+
+        #without weights
+        @test_throws ErrorException ssten.COOTen(unsorted_indices) #unsorted rows
+        @test_throws ErrorException ssten.COOTen(zero_indexed_indices) #zero indexed
+
+    end
+
+
+    @testset "COOTEN iterator" begin
+        valid_indices = [1 2 3; 2 2 3; 1 2 4]
+        valid_values = [1.0,2.0,3.0]
+
+    end
+
+end
 @test_throws ErrorException SSSTensor()
 
 end

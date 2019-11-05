@@ -14,8 +14,6 @@ import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
 import Arpack.eigs, Arpack.svds
 
-#TODO: refactor to make class COOTen
-
 #TODO: SSSTensor([i,j,k]) returns abnormal result, this should be altered to set
 # default hyperedge weight to 1.
 
@@ -24,6 +22,42 @@ import Arpack.eigs, Arpack.svds
 #      need to standardize this.
 #TODO: possible to condense constructor definitions with default params
 #TODO: Remove triangles_iterator constructor
+
+abstract type AbstractSSTen end
+
+#TODO: Determine if we should make mutable in a later version
+#TODO: Can make this parametric, but only supporting real floats currently.
+struct COOTen{nnz,o} <: AbstractSSTen
+
+	cubical_dimension::Int
+	order::Int
+	unique_nnz::Int
+	indices::SMatrix{nnz, o, Int}
+	values::SVector{nnz,Float64}
+
+	function COOTen(indices)
+		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices)
+	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+	end
+
+	function COOTen(indices,values)
+		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices,values)
+	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+	end
+
+	function COOTen(indices,values,n)
+		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices,values,n)
+	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+	end
+
+end
+
+
+#write iterators for COOTen
+Base.iterate(A::COOTen, state=1) =
+    state > A.unique_nnz ? nothing : ((A.indices[state,:],A.values[state]),state + 1)
+Base.length(A::COOTen) = A.unique_nnz
+
 
 
 mutable struct SSSTensor
@@ -54,9 +88,11 @@ mutable struct SSSTensor
 
   #function SSSTensor(path_file::String)
   #TODO: load .ssten file
-
-
 end
+
+#write iterators for COOTen
+Base.iterate(A::SSSTensor, state=1) = Base.iterate(A.edges,state)
+Base.length(A::SSSTensor) = Base.length(A.edges)
 
 # Include the files from the other functions
 include("Helpers.jl") # makes helpers accessible to other files
@@ -89,8 +125,9 @@ end
 
 #=------------------------------------------------------------------------------
 						          Input Verifiers
+--------------------------------------------------------------------------------
+						          SSTen Verifier
 ------------------------------------------------------------------------------=#
-
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges,n)
 
@@ -218,6 +255,102 @@ function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Nu
   return max_index
 end
 
+#=------------------------------------------------------------------------------
+						          COOTen Verifiers
+------------------------------------------------------------------------------=#
+
+
+"""-----------------------------------------------------------------------------
+    COOTen_verifier(indices, values)
+
+  This function takes in a 2-D array and checks to see that the indices in each
+row are sorted, that the sizes of the passed in values are correct and if the
+invariants are preserved, returns the order, cubical_dimension, and unique
+non-zero count back for the constructor.
+
+Input:
+------
+* indices - (Array{Int64,2}):
+
+    Array storing all the indices of the tensor to be formed. Rows must be
+    sorted in increasing order.
+
+* values - (optional Array{Float64,1}):
+
+    Array storing the non-zero values of the tensor to be formed. Must have the
+    same number of rows as indices as each row of each correspond to the same
+    hyperedge. If none are passed in, one is constructed containing all ones.
+
+* n - (optional Int)
+
+    The desired cubical dimension, allows for the construction of tensors with
+    zero subtensors. Throws an error if not the largest
+Output:
+-------
+
+* cubical_dimension
+
+  The dimension of each mode for the cubical tensor formed.
+
+* unique_nnz
+
+  The number of unique non-zeros in the tensor up to symmetry.
+
+* order
+
+  The number of modes of the tensor.
+
+* indices - (SMatrix)
+
+  A static matrix made from the indices passed in.
+
+* values - (SVector)
+
+  A static vector made from the values passed in.
+-----------------------------------------------------------------------------"""
+function COOTenVerifier(indices::Array{Int,2},
+    					values::Union{Array{Float64,1},Nothing}=nothing,
+                        n::Union{Int,Nothing}=nothing)
+
+    rows, order = size(indices)
+	if values === nothing
+		values = ones(rows)
+	end
+
+	if n === nothing
+		n = Inf
+	end
+	unique_nnz = length(values)
+
+	if rows != unique_nnz
+		error("Indices and values have mis-matched sizes. indices has $(rows) rows and values has $(unique_nnz) entries. These must be the same.")
+	end
+
+
+	cubical_dimension = 0
+
+    for i in 1:rows
+		#check for sorted rows
+		if !issorted(indices[i,:])
+			error("row $(i) has unsorted indices: $(indices[i,:]). Each row must be sorted in increasing order.")
+		end
+
+		#check for valid indices
+		if indices[i,1] < 1
+			error("row $(i) has index less than 1 in entry $(indices[i,:]), Julia is indexed by 1.")
+		elseif indices[i,order] > cubical_dimension
+
+			if cubical_dimension > n
+				error("indices contain vertex index,$(indices[i,order]), greater than specified cubical dimension, n:$(n), specified.")
+			end
+			cubical_dimension = indices[i,order]
+		end
+	end
+
+	return cubical_dimension,unique_nnz,order,
+	       SMatrix{unique_nnz,order,Int,unique_nnz*order}(indices),
+		   SVector{unique_nnz,Float64}(values)
+end
 
 
 end #module end
