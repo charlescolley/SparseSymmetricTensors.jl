@@ -225,12 +225,14 @@ edges associated with that edge.
 
     The dictionary which links all vertices to the hyper edges they're contained
     within.
+
+TODO: May be good to create a version where you can request the incidence for a
+particular vertex
 -----------------------------------------------------------------------------"""
-function find_edge_incidence(A::SSSTensor)
+function find_edge_incidence(A::Ten) where {Ten <: AbstractSSTen}
   edge_incidence = Dict{Int,Set{Tuple{Array{Int,1},Number}}}()
 
-  for (indices,val) in A.edges
-    edge = (indices,val)
+  for (indices,val) in A
 
 	prev_v = -1
     for v in indices
@@ -238,9 +240,9 @@ function find_edge_incidence(A::SSSTensor)
 	    continue
 	  else
   	    if !haskey(edge_incidence,v)
-	      edge_incidence[v] = Set([edge])
+	      edge_incidence[v] = Set([(indices,val)])
 	    else
-	      push!(edge_incidence[v],edge)
+	      push!(edge_incidence[v],(indices,val))
 	    end
 	  end
 	  prev_v = v
