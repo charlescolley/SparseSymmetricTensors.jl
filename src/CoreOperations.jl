@@ -17,6 +17,20 @@
     * find_nnz - ()
 
 ------------------------------------------------------------------------------=#
+
+#=------------------------------------------------------------------------------
+						        Common Operators
+------------------------------------------------------------------------------=#
+function ==(A::Ten,B::Ten) where {Ten <: AbstractSSTen}
+	#TODO: add in sorting.
+	for ((ind_A,v_A), (ind_B,v_B)) in zip(A,B)
+	  if v_A != v_B || ind_A != ind_B
+		  return false
+	  end
+	end
+	true
+end
+
 #=------------------------------------------------------------------------------
 						           File I/O
 ------------------------------------------------------------------------------=#
@@ -47,13 +61,13 @@
   * filepath - (string):
     The location to save the file.
 ----------------------------------------------------------------------------"""
-function save(A::SSSTensor, filepath::String)
+function save(A::Ten, filepath::String) where {Ten <: AbstractSSTen}
     file = open(filepath, "w")
 
-    header = "$(order(A))\t$(A.cubical_dimension)\t$(length(A.edges))\n"
+    header = "$(order(A))\t$(A.cubical_dimension)\t$(length(A))\n"
     write(file,header);
 
-    for (edge,weight) in A.edges
+    for (edge,weight) in A
 		edge_string=""
         for v_i in edge
 		   edge_string *= string(v_i,"\t")
@@ -81,13 +95,16 @@ end
     Sorts each of the hyperedge indices before storing them. Can be used as a
     quick fix for a improperly formatted file. Not recommended as it will add
     to memory usage and run time.
+  * type - (optional String):
 
   Outputs:
   --------
   * A - (SSSTensor):
     The Sparse symmetric tensor stored in the file.
+
+ TODO: Maybe it would be better to assume .ssten format is indexed by 1.
 -----------------------------------------------------------------------------"""
-function load(filepath::String,enforceFormatting::Bool=false)
+function load(filepath::String,enforceFormatting::Bool=false,type::String="DICTen")
 	#check path validity
 	@assert filepath[end-5:end] == ".ssten"
 
@@ -96,33 +113,40 @@ function load(filepath::String,enforceFormatting::Bool=false)
 		order, n, m =
 			[parse(Int,elem) for elem in split(chomp(readline(file)),'\t')]
 
-		hyperedges = Array{Tuple{Array{Int64,1},Float64},1}(undef, m)
+		indices = Array{Int,2}(undef,m,order)
+		values = Array{Float64,1}(undef,m)
+
+		#hyperedges = Array{Tuple{Array{Int64,1},Float64},1}(undef, m)
 
 		i = 0
 		for line in eachline(file)
 			i += 1
 			entries = split(chomp(line),'\t')
-
-			hyperedges[i] = ([parse(Int,elem) for elem in entries[1:end-1]],
-			                 parse(Float64,entries[end]))
+			indices[i,:] = [parse(Int,elem) for elem in entries[1:end-1]]
+			values[i] = parse(Float64,entries[end])
 		end
 
 		#check for 0 indexing
 		zero_indexed = false
 
-		for (indices,_) in hyperedges
-			for v_i in indices
-				if v_i == 0
-    				zero_indexed = true
-    				break
-				end
+		for i in 1:m
+		    if indices[i,1] == 0
+    			zero_indexed = true
+				break
 			end
-		end
+	    end
 
 		if zero_indexed
-			redo_indexing!(hyperedges)
+			indices.+ 1
 		end
-		return SSSTensor(hyperedges)
+
+		if type == "DICTen"
+			return SSSTensor([(indices[i,:],values[i]) for i in 1:m])
+		elseif type == "COOTen"
+			return COOTen(indices,values)
+		else
+			error("type:$(type) not defined.\n Curently supporting:'DICTen','COOTen'.")
+		end
 	end
 end
 
@@ -229,6 +253,10 @@ function order(A::SSSTensor)
     for (indices,_) in A.edges
         return length(indices)
     end
+end
+
+function order(A::COOTen)
+    return A.order
 end
 
 """-----------------------------------------------------------------------------
