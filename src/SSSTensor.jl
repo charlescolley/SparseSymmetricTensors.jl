@@ -13,6 +13,8 @@ using StaticArrays
 import Combinatorics.permutations, Combinatorics.multinomial
 import LinearAlgebra.eigen, LinearAlgebra.norm, LinearAlgebra.dot
 import Arpack.eigs, Arpack.svds
+import Base: ==
+
 
 #TODO: SSSTensor([i,j,k]) returns abnormal result, this should be altered to set
 # default hyperedge weight to 1.
@@ -60,7 +62,7 @@ Base.length(A::COOTen) = A.unique_nnz
 
 
 
-mutable struct SSSTensor
+mutable struct SSSTensor <: AbstractSSTen
   edges::Dict{Array{Int,1},Number}
   cubical_dimension::Int
 

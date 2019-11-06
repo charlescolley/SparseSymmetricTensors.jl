@@ -130,6 +130,7 @@ end
 helper function for testing and adding in the permutation as an edge into the
 dictionary used to build the symmetric tensor from the
 
+TODO: add in types
 """
 function add_perm!(edges,A,order,indices)
     val = A[indices...]

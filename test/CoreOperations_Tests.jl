@@ -21,7 +21,7 @@ end
 
 @testset "CoreOperations Tests" begin
 
-  @testset "COOTens save/load tests" begin
+  @testset "save/load tests" begin
     _, indices, vals = set_up(n,ord,nnz)
 
     A = ssten.COOTen(indices,vals,n)
