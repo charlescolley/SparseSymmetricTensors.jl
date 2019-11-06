@@ -1,4 +1,13 @@
-#=------------------------------------------------------------------------------
+#=
+Functions:
+  contract_edge(e,x,k)
+  contract_edge_k_1(e,x)
+  contract(A,x,m)
+  contract_k_1(A,x)
+  contract_k_1!(A(type needs to be determined),x,k,y)
+  contract_multi(A,vs)
+  contract_edge_k_1!(indices,val,x,res)
+#------------------------------------------------------------------------------
 						           Contraction
 ------------------------------------------------------------------------------=#
 
@@ -204,11 +213,11 @@ end
             xs = prod(x[collect(@ntuple $m j-> i_{j+$p})])
             (@nref $p y i) += xs*(@nref $k A i)
         end
-	if $k == m
-	  for val in y
-	    return val
-	  end
-	else
+		if $k == m
+	  		for val in y
+	    		return val
+	  		end
+		else
           return y
         end
       end
@@ -235,7 +244,7 @@ Outputs
 
     The output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
-function contract_k_1(A::SSSTensor, x::Array{N,1}) where {N <: Number}
+function contract_k_1(A::Ten, x::Array{N,1}) where {N <: Number,Ten <: AbstractSSTen}
     @assert length(x) == A.cubical_dimension
 
     new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
@@ -290,14 +299,13 @@ function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: Number
   return contract_multi(A,hcat(v,u))
 end
 
-
 """-----------------------------------------------------------------------------
     contract_k_1(A(type needs to be determined),x,k)
 
   Contracts the vector x with the tensor to all but one mode
 
 -----------------------------------------------------------------------------"""
-function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n,
+function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n::Int,
                       x::Array{N,1}) where N <: Number
 
 	rows, ord = size(indices)
@@ -305,7 +313,7 @@ function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n,
 	y = zeros(n) #resulting vector
 
 	for i=1:rows
-		contract_edge_k_1!(indices[i,:],nnz[i],x,y)
+		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
 	end
 
 	return y
@@ -326,12 +334,12 @@ function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
 	n = size(y)[1]
 
 	#initialize the output vector to all zeros
-	for i=1:n
+	@inbounds for i=1:n
 		y[i] = 0.0
 	end
 
 	for i=1:rows
-		contract_edge_k_1!(indices[i,:],nnz[i],x,y)
+		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
 	end
 end
 
@@ -362,23 +370,23 @@ Inputs:
     this function is considered a helper function to the contract function o
     verloaded for the dense array representation of symmetric tensors.
 -----------------------------------------------------------------------------"""
-function contract_edge_k_1!(indices::Array{Int,1},nnz_val::N,
-                            x::Array{N,1},res::Array{N,1}) where N <: Number
-
-    ord = size(indices)[1]
-
+@inline function contract_edge_k_1!(edge::Tuple{Union{Array{Int,1},
+                                                      SVector{M,T}},N},
+                                    x::Array{N,1},res::Array{N,1})where {M,T, N <: AbstractFloat}
+	(indices, nnz_val) = edge
+    ord = length(indices)
 	prev_index = -1
-	sub_edge = Array{Int,1}(undef,ord -1)
-	for j =1:ord
+	sub_edge = Array{Int,1}(undef,ord - 1)
+
+	for j = 1:ord
 		#only compute contraction once per index
 		if prev_index != indices[j]
+
 			#form sub_edge
 			i = 1
-			for k=1:ord
-			    if k != j
-    			    sub_edge[i] = indices[k]
-					i+= 1
-			    end
+			for k in Base.Iterators.flatten((1:j-1,j+1:ord))
+				sub_edge[i] = indices[k]
+				i += 1
 			end
 
 			val = nnz_val * multiplicity_factor(sub_edge)
@@ -390,6 +398,24 @@ function contract_edge_k_1!(indices::Array{Int,1},nnz_val::N,
 		prev_index = indices[j]
 	end
 
+end
 
+
+"""-----------------------------------------------------------------------------
+    contract_k_1(A,x,k)
+
+  Contracts the vector x with the tensor to all but one mode
+
+-----------------------------------------------------------------------------"""
+function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: Number}
+	@assert A.cubical_dimension == length(x)
+
+	y = zeros(A.cubical_dimension) #resulting vector
+
+	for edge in A
+		contract_edge_k_1!(edge,x,y)
+	end
+
+	return y
 end
 
