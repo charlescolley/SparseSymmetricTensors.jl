@@ -6,47 +6,54 @@ include("../src/SSSTensor.jl")
 using .ssten
 
 
-global n = 5
-global valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
-global unordered_edge = [([2,3,1],1.0)]
-global negative_index = [([-1,2,3],1.0)]
+
 
 @testset "Contructor Tests" begin
 
-@testset "Hyperedge List Constructor" begin
+@testset "DictTen Constructor Tests" begin
 
-    @test_throws ErrorException SSSTensor(unordered_edge) #unsorted indices
-    @test_throws ErrorException SSSTensor(unordered_edge,n)
-    @test_throws ErrorException SSSTensor(unordered_edge,1) # too small cubical dim
-    @test_throws ErrorException SSSTensor(valid_edges,1)
-    @test_throws ErrorException SSSTensor(negative_index,1)
-    @test_throws ErrorException SSSTensor(negative_index,n) #neg index
-    @test_throws ErrorException SSSTensor(negative_index)
-end
+    n = 5
+    valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
+    unordered_edge = [([2,3,1],1.0)]
+    negative_index = [([-1,2,3],1.0)]
 
-@testset "Dense Tensor Constructor" begin
+    @testset "Hyperedge List Constructor" begin
 
-    non_sym_tensor = rand(2,2,2,2)
-    sym_tensor = ones(2,2,2,2)
-    @test_throws ErrorException SSSTensor(non_sym_tensor)
-    @test_throws ErrorException SSSTensor(sym_tensor,1) # too small cubical dim
-    @test_throws ErrorException SSSTensor(non_sym_tensor,1)
-end
+        @test_throws ErrorException ssten.SSSTensor(unordered_edge) #unsorted indices
+        @test_throws ErrorException ssten.SSSTensor(unordered_edge,n)
+        @test_throws ErrorException ssten.SSSTensor(unordered_edge,1) # too small cubical dim
+        @test_throws ErrorException ssten.SSSTensor(valid_edges,1)
+        @test_throws ErrorException ssten.SSSTensor(negative_index,1)
+        @test_throws ErrorException ssten.SSSTensor(negative_index,n) #neg index
+        @test_throws ErrorException ssten.SSSTensor(negative_index)
+    end
 
-@testset "Dictionary Constructor" begin
+    @testset "Dense Tensor Constructor" begin
 
-    D_valid_edges = Dict(valid_edges)
-    D_unordered_edge = Dict(unordered_edge)
-    D_negative_index = Dict(negative_index)
+        non_sym_tensor = rand(2,2,2,2)
+        sym_tensor = ones(2,2,2,2)
+        @test_throws ErrorException ssten.SSSTensor(non_sym_tensor)
+        @test_throws ErrorException ssten.SSSTensor(sym_tensor,1) # too small cubical dim
+        @test_throws ErrorException ssten.SSSTensor(non_sym_tensor,1)
+    end
 
-    @test_throws ErrorException SSSTensor(D_unordered_edge) #unsorted indices
-    @test_throws ErrorException SSSTensor(D_unordered_edge,n)
-    @test_throws ErrorException SSSTensor(D_unordered_edge,1) # too small cubical dim
-    @test_throws ErrorException SSSTensor(D_valid_edges,1)
-    @test_throws ErrorException SSSTensor(D_negative_index,1)
-    @test_throws ErrorException SSSTensor(D_negative_index,n) #neg index
-    @test_throws ErrorException SSSTensor(D_negative_index)
+    @testset "Dictionary Constructor" begin
 
+        D_valid_edges = Dict(valid_edges)
+        D_unordered_edge = Dict(unordered_edge)
+        D_negative_index = Dict(negative_index)
+
+        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge) #unsorted indices
+        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge,n)
+        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge,1) # too small cubical dim
+        @test_throws ErrorException ssten.SSSTensor(D_valid_edges,1)
+        @test_throws ErrorException ssten.SSSTensor(D_negative_index,1)
+        @test_throws ErrorException ssten.SSSTensor(D_negative_index,n) #neg index
+        @test_throws ErrorException ssten.SSSTensor(D_negative_index)
+
+    end
+
+    @test_throws ErrorException ssten.SSSTensor()
 end
 
 @testset "COOTEN" begin
@@ -61,11 +68,11 @@ end
     @testset "COOTEN Constructor" begin
 
 
-        A = ssten.COOTen(indices,rand(3),10)
-        @assert A.cubical_dimension == 10
+        A = ssten.COOTen(valid_indices,rand(3),10)
+        @test A.cubical_dimension == 10
 
-         A = ssten.COOTen(indices,rand(3))
-        @assert A.cubical_dimension == maximum(indices)
+         A = ssten.COOTen(valid_indices,rand(3))
+        @test A.cubical_dimension == maximum(valid_indices)
 
 
         #all params
@@ -94,7 +101,7 @@ end
     end
 
 end
-@test_throws ErrorException SSSTensor()
+
 
 end
 

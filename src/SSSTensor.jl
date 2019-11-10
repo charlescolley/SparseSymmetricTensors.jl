@@ -29,37 +29,35 @@ abstract type AbstractSSTen end
 
 #TODO: Determine if we should make mutable in a later version
 #TODO: Can make this parametric, but only supporting real floats currently.
-struct COOTen{nnz,o} <: AbstractSSTen
+struct COOTen <: AbstractSSTen
 
 	cubical_dimension::Int
 	order::Int
 	unique_nnz::Int
-	indices::SMatrix{nnz, o, Int}
-	values::SVector{nnz,Float64}
+	edges::Vector{Tuple{Array{Int,1},Float64}}
 
 	function COOTen(indices)
-		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices)
-	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+		cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices)
+	    return new(cubical_dimension,order,unique_nnz,edges)
 	end
 
 	function COOTen(indices,values)
-		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices,values)
-	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+		cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices,values)
+	    return new(cubical_dimension,order,unique_nnz,edges)
 	end
 
 	function COOTen(indices,values,n)
-		cubical_dimension,unique_nnz,order,ind,vals = COOTenVerifier(indices,values,n)
-	    return new{unique_nnz,order}(cubical_dimension,order,unique_nnz,ind,vals)
+		_,unique_nnz,order,edges = COOTenVerifier(indices,values,n)
+	    return new(n,order,unique_nnz,edges)
 	end
 
 end
 
 
-#write iterators for COOTen
+#iterators for COOTen
 Base.iterate(A::COOTen, state=1) =
-    state > A.unique_nnz ? nothing : ((A.indices[state,:],A.values[state]),state + 1)
+    state > length(A) ? nothing : (A.edges[state],state +1)
 Base.length(A::COOTen) = A.unique_nnz
-
 
 
 mutable struct SSSTensor <: AbstractSSTen
@@ -325,7 +323,9 @@ function COOTenVerifier(indices::Array{Int,2},
 	unique_nnz = length(values)
 
 	if rows != unique_nnz
-		error("Indices and values have mis-matched sizes. indices has $(rows) rows and values has $(unique_nnz) entries. These must be the same.")
+		error("Indices and values have mis-matched sizes. indices has $(rows)",
+		      " rows and values has $(unique_nnz) entries. These must be the ",
+			  "same.")
 	end
 
 
@@ -334,24 +334,29 @@ function COOTenVerifier(indices::Array{Int,2},
     for i in 1:rows
 		#check for sorted rows
 		if !issorted(indices[i,:])
-			error("row $(i) has unsorted indices: $(indices[i,:]). Each row must be sorted in increasing order.")
+			error("row $(i) has unsorted indices: $(indices[i,:]). Each row ",
+			      "must be sorted in increasing order.")
 		end
 
 		#check for valid indices
 		if indices[i,1] < 1
-			error("row $(i) has index less than 1 in entry $(indices[i,:]), Julia is indexed by 1.")
+			error("row $(i) has index less than 1 in entry $(indices[i,:]), ",
+			      "Julia is indexed by 1.")
 		elseif indices[i,order] > cubical_dimension
 
 			if cubical_dimension > n
-				error("indices contain vertex index,$(indices[i,order]), greater than specified cubical dimension, n:$(n), specified.")
+				error("indices contain vertex index,$(indices[i,order]), ",
+				      "greater than specified cubical dimension, n:$(n), ",
+					  "specified.")
 			end
 			cubical_dimension = indices[i,order]
 		end
 	end
 
+	#ord = Tuple{order}
 	return cubical_dimension,unique_nnz,order,
-	       SMatrix{unique_nnz,order,Int,unique_nnz*order}(indices),
-		   SVector{unique_nnz,Float64}(values)
+	       [((indices[i,:]),values[i]) for i in 1:unique_nnz]
+
 end
 
 
