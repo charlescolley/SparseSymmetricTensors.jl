@@ -72,7 +72,7 @@ Output:
     The order the vertices were visited in, used for permuting into block
     diagonal structures.
 -----------------------------------------------------------------------------"""
-function connected_components(A::SSSTensor,v0::Int = 1)
+function connected_components(A::Ten,v0::Int = 1) where {Ten <: AbstractSSTen}
   n = A.cubical_dimension
 
   #initialize variables
@@ -123,6 +123,7 @@ function connected_components(A::SSSTensor,v0::Int = 1)
 
   return component_assignment, component_sizes, visiting_order
 end
+
 """-----------------------------------------------------------------------------
     get_largest_component(A,filepath)
 

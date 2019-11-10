@@ -6,6 +6,7 @@ include("../src/SSSTensor.jl")
  ord = 5
  tol = 1e-9
  nnz = 10
+ tmppath = "tempLargestComp"
 
 function set_up(n,ord,nnz)
     x = rand(n)
@@ -20,8 +21,40 @@ end
 
 @testset "HyperGraphAlgos Tests" begin
 
-    @testset "find_edge_incidence tests" begin
-#         _, indices, vals = set_up(n,ord,nnz)
+
+    @testset "Largest Connected Component Tests" begin
+
+        _, indices, vals = set_up(n,ord,nnz)
+        indices = cat(indices,(n+1)*ones(Int,ord)',1)
+
+        A = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz])
+
+        get_largest_component(A::SSSTensor,filepath=tmppath)
+
+
+    end
+
+    #do we need order tests?
+    @testset "Connected Components Tests" begin
+        indices = [1 1 2 3; 1 2 2 2; 1 3 3 3] #fully connected
+        vals = [1.0,2.0,3.0]
+
+        DictA = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:3],3)
+        COOA  = ssten.COOTen(indices,vals,3)
+
+        assignment, sizes, _ = ssten.connected_components(DictA)
+        @test assignment == ones(3)
+        @test sizes[1] == 3
+
+        COOA  = ssten.COOTen(indices,vals,3)
+        assignment, sizes, orders = ssten.connected_components(COOA)
+        @test assignment == ones(3)
+        @test sizes[1] == 3
+
+    end
+
+    @testset "find_edge_incidence Tests" begin
+
          indices = [1 1 2; 1 2 2; 3 3 3]
          vals = [1.0,2.0,3.0]
          edges = [(indices[i,:],vals[i]) for i in 1:3]
