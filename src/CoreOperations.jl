@@ -22,9 +22,26 @@
 						        Common Operators
 ------------------------------------------------------------------------------=#
 function ==(A::Ten,B::Ten) where {Ten <: AbstractSSTen}
+	if A.cubical_dimension != B.cubical_dimension
+		return false
+	end
+
 	#TODO: add in sorting.
 	for ((ind_A,v_A), (ind_B,v_B)) in zip(A,B)
 	  if v_A != v_B || ind_A != ind_B
+		  return false
+	  end
+	end
+	true
+end
+
+function ==(A::SSSTensor,B::SSSTensor)
+	if A.cubical_dimension != B.cubical_dimension
+		return false
+	end
+
+	for (ind_A,v_A) in A
+	  if get(B.edges,ind_A,nothing) != v_A
 		  return false
 	  end
 	end
@@ -79,6 +96,7 @@ function save(A::Ten, filepath::String) where {Ten <: AbstractSSTen}
 	close(file)
 end
 
+#TODO: add in a loading bar
 """-----------------------------------------------------------------------------
     load(filepath,NoChecks)
 
@@ -137,13 +155,13 @@ function load(filepath::String,enforceFormatting::Bool=false,type::String="DICTe
 	    end
 
 		if zero_indexed
-			indices.+ 1
+			indices .+= 1
 		end
 
 		if type == "DICTen"
-			return SSSTensor([(indices[i,:],values[i]) for i in 1:m])
+			return SSSTensor([(indices[i,:],values[i]) for i in 1:m],n)
 		elseif type == "COOTen"
-			return COOTen(indices,values)
+			return COOTen(indices,values,n)
 		else
 			error("type:$(type) not defined.\n Curently supporting:'DICTen','COOTen'.")
 		end
@@ -231,37 +249,56 @@ Output:
     The subtensor of A which only contains the hyperedges of A which all include
     each index in indices.
 -----------------------------------------------------------------------------"""
-function get_sub_tensor(A::SSSTensor,indices::T;
-                        remap::Bool=false) where T <: Union{Array{Int,1},Set{Int}}
-  @assert 0 < length(indices) <= A.cubical_dimension
-  @assert all(indices .> 0)
+function get_sub_tensor(A::Ten,indices::T,
+                        remap::Bool=false) where {T <: Union{Array{Int,1},Set{Int}},
+												  Ten <: AbstractSSTen}
+	@assert 0 < length(indices) <= A.cubical_dimension
+	@assert all(indices .> 0)
 
-  if T == Array{Int,1}
-    indices = Set(indices)
-  end
-
-  incident_edges = find_edge_incidence(A)
-  sub_tensor_edges = Array{Tuple{Array{Int,1},Number}}(undef,0)
-
-  for v_i in indices
-    for (V,val) in get(incident_edges,v_i,[])
-	  edge = (V,val)
-	  #only include edge if all indices in hyperedge are desired
-	  if all(x -> x in indices,V)
-	    push!(sub_tensor_edges,edge)
-      end
-	  #remove all other edges in incidence
-	  for v_j in V
-	    delete!(get(incident_edges,v_j,[]),edge)
-	  end
+	if T == Array{Int,1}
+		indices = Set(indices)
 	end
-  end
 
-  if remap
-	remap_indices!(sub_tensor_edges)
-  end
+	incident_edges = find_edge_incidence(A)
+	sub_tensor_edges = Array{Tuple{Array{Int,1},Number}}(undef,0)
 
-  SSSTensor(sub_tensor_edges)
+	for v_i in indices
+		for (V,val) in get(incident_edges,v_i,[])
+			edge = (V,val)
+
+			#only include edge if all indices in hyperedge are desired
+			if all(x -> x in indices,V)
+				push!(sub_tensor_edges,edge)
+			end
+
+			#remove all other edges in incidence
+			for v_j in V
+				delete!(get(incident_edges,v_j,[]),edge)
+			end
+		end
+	end
+
+	if remap
+		remap_indices!(sub_tensor_edges)
+	end
+
+
+	if Ten == COOTen
+
+		nnz = length(sub_tensor_edges)
+		k = length(sub_tensor_edges[1][1])
+
+		sub_indices = Array{Int,2}(undef,nnz,k)
+		sub_vals = Array{typeof(sub_tensor_edges[1][2]),1}(undef,nnz)
+
+		for (i,(inds,val)) in zip(1:nnz,sub_tensor_edges)
+			sub_indices[i,:] = inds
+			sub_vals[i] = val
+		end
+		COOTen(sub_indices,sub_vals)
+	elseif Ten == SSSTensor
+		SSSTensor(sub_tensor_edges)
+	end
 end
 
 #=------------------------------------------------------------------------------
