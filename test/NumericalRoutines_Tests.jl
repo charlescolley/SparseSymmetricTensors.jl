@@ -18,50 +18,51 @@ include("../src/SSSTensor.jl")
             indices[i,:] = indices[i,sortperm(indices[i, :])]
         end
         vals = rand(nnz)
-        A = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz])
+        dictA = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz])
+        COOA = ssten.COOTen(indices,vals)
 
         max_iter = 500
         x_0 = randn(n)
 
         #no shift test
         shift =0.0
-        matHOPM_x, matHOPM_λ, matHOPM_iter =
-           ssten.SSHOPM(indices,vals,n, x_0,shift,max_iter,tol)
+        COOHOPM_x, COOHOPM_λ, COOHOPM_iter =
+          ssten.SSHOPM(COOA,x_0,shift,max_iter,tol)
 
         dictHOPM_x, dictHOPM_λ, dictHOPM_iter =
-           ssten.SSHOPM(A, x_0,shift,max_iter,tol)
-       println("og SSHOPM iterates : $(dictHOPM_iter)")
-       println("new SSHOPM iterates : $(matHOPM_iter)")
+           ssten.SSHOPM(dictA, x_0,shift,max_iter,tol)
 
-       @test norm(matHOPM_x - dictHOPM_x) < tol
-       @test abs(matHOPM_λ - dictHOPM_λ) < tol
+        @test dictHOPM_iter == COOHOPM_iter
+        @test norm(COOHOPM_x - dictHOPM_x)/norm(COOHOPM_x) < tol
+        @test abs(COOHOPM_λ - dictHOPM_λ) < tol
 
 
-       #postive shift test
-       shift = rand()
-        matHOPM_x, matHOPM_λ, matHOPM_iter =
-           ssten.SSHOPM(indices,vals,n, x_0,shift,max_iter,tol)
+        #postive shift test
+        shift = rand()
 
-        dictHOPM_x, dictHOPM_λ, dictHOPM_iter =
-           ssten.SSHOPM(A, x_0,shift,max_iter,tol)
-       println("og SSHOPM iterates : $(dictHOPM_iter)")
-       println("new SSHOPM iterates : $(matHOPM_iter)")
-
-       @test norm(matHOPM_x - dictHOPM_x) < tol
-       @test abs(matHOPM_λ - dictHOPM_λ) < tol
-
-       #negative shift test
-       shift = -rand()
-        matHOPM_x, matHOPM_λ, matHOPM_iter =
-           ssten.SSHOPM(indices,vals,n, x_0,shift,max_iter,tol)
+        COOHOPM_x, COOHOPM_λ, COOHOPM_iter =
+          ssten.SSHOPM(COOA,x_0,shift,max_iter,tol)
 
         dictHOPM_x, dictHOPM_λ, dictHOPM_iter =
-           ssten.SSHOPM(A, x_0,shift,max_iter,tol)
-       println("og SSHOPM iterates : $(dictHOPM_iter)")
-       println("new SSHOPM iterates : $(matHOPM_iter)")
+           ssten.SSHOPM(dictA, x_0,shift,max_iter,tol)
 
-       @test norm(matHOPM_x - dictHOPM_x) < tol
-       @test abs(matHOPM_λ - dictHOPM_λ) < tol
+        @test dictHOPM_iter == COOHOPM_iter
+        @test norm(COOHOPM_x - dictHOPM_x)/norm(COOHOPM_x) < tol
+        @test abs(COOHOPM_λ - dictHOPM_λ) < tol
+
+        #negative shift test
+        shift = -rand()
+
+        COOHOPM_x, COOHOPM_λ, COOHOPM_iter =
+          ssten.SSHOPM(COOA,x_0,shift,max_iter,tol)
+
+        dictHOPM_x, dictHOPM_λ, dictHOPM_iter =
+           ssten.SSHOPM(dictA, x_0,shift,max_iter,tol)
+
+        @test dictHOPM_iter == COOHOPM_iter
+        @test norm(COOHOPM_x - dictHOPM_x)/norm(COOHOPM_x) < tol
+        @test abs(COOHOPM_λ - dictHOPM_λ) < tol
+
     end
 
 

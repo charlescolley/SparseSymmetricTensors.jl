@@ -158,8 +158,8 @@ Output:
 
     The number of iterations the algorithm ran for.
 -----------------------------------------------------------------------------"""
-function SSHOPM(A::SSSTensor, x_0::Array{N,1},shift::N,max_iter,tol) where
-                N <: Number
+function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter,tol) where
+				{N <: Number, Ten <: AbstractSSTen}
     @assert A.cubical_dimension == length(x_0)
 
     x = x_0/norm(x_0)
