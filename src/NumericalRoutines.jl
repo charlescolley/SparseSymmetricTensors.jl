@@ -23,12 +23,12 @@ tolerance.
 
 Input:
 ------
-* A - (SSSTensor or Array{Number,k > 2})
+* A - (SSSTensor or Array{AbstractFloat,k > 2})
 
     The symmetric tensor to compute the eigenvector of. Dense tensors have
     limited support, primary support is for constructors to the sparse cases.
 
-* x0 - (Array{Number,1})
+* x0 - (Array{AbstractFloat,1})
 
     The initial starting point for solving the dynamical system.
 * h - (Float64)
@@ -49,16 +49,16 @@ Input:
 
 Output:
 -------
-* x - (Array{Number,1}
+* x - (Array{AbstractFloat,1}
 
     The resulting eigenvector computed by the dynamical system method.
-* lambda - (Number)
+* lambda - (AbstractFloat)
 
     The resulting eigenvalue computed by the dynamical system method.
 -----------------------------------------------------------------------------"""
 function Dynamical_System_Solver(A::SSSTensor,x0::Array{N,1},h::Float64,
                                  tol::Float64,m::Int64 = 1, update::Int = 0) where
-								 N <: Number
+								 N <: AbstractFloat
                                  #start with strictly positive random vector
                                  #check the monotonic dereasing property
   n = A.cubical_dimension
@@ -98,7 +98,7 @@ end
 #figure out if it's faster to do an internal check than two overloaded functions
 
 function Dynamical_System_Solver(A::Array{N,k},x0::Array{N,1},h::Float64,
-                                 tol::Float64,m::Int64 = 1) where {N <: Number,k}
+                                 tol::Float64,m::Int64 = 1) where {N <: AbstractFloat,k}
   #k = length(size(A))
   n = size(A)[1]
   @assert m <= n
@@ -130,10 +130,10 @@ Input:
 * A - (SSSTensor):
 
     An instance of the super symmetric tensor class.
-* x_0 - (Array{Number,1}):
+* x_0 - (Array{AbstractFloat,1}):
 
     An initial vector to start the algorithm with.
-* shift - (Number)
+* shift - (AbstractFloat)
 
     The shift for the algorithm, can be predetermined to ensure convergence of
     the method.
@@ -148,10 +148,10 @@ Input:
 
 Output:
 -------
-* z - (Array{Number,1})
+* z - (Array{AbstractFloat,1})
 
     The final vector produced by the SSHOPM routine.
-* lambda_k - (Number)
+* lambda_k - (AbstractFloat)
 
     The final approximate eigenvalue at the last iteration.
 * iterations - (Integer)
@@ -159,7 +159,7 @@ Output:
     The number of iterations the algorithm ran for.
 -----------------------------------------------------------------------------"""
 function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter,tol) where
-				{N <: Number, Ten <: AbstractSSTen}
+				{N <: AbstractFloat, Ten <: AbstractSSTen}
     @assert A.cubical_dimension == length(x_0)
 
     x = x_0/norm(x_0)
@@ -211,10 +211,10 @@ Input:
 * indices - (Array{Int,2}):
 
     Indices associated with
-* x_0 - (Array{Number,1}):
+* x_0 - (Array{AbstractFloat,1}):
 
     An initial vector to start the algorithm with.
-* shift - (Number)
+* shift - (AbstractFloat)
 
     The shift for the algorithm, can be predetermined to ensure convergence of
     the method.
@@ -229,10 +229,10 @@ Input:
 
 Output:
 -------
-* z - (Array{Number,1})
+* z - (Array{AbstractFloat,1})
 
     The final vector produced by the SSHOPM routine.
-* lambda_k - (Number)
+* lambda_k - (AbstractFloat)
 
     The final approximate eigenvalue at the last iteration.
 * iterations - (Integer)
@@ -240,7 +240,7 @@ Output:
     The number of iterations the algorithm ran for.
 -----------------------------------------------------------------------------"""
 function SSHOPM(indices::Array{Int,2},vals::Array{N,1},n::Int, x_0::Array{N,1},
-                shift::N,max_iter,tol) where N <: Number
+                shift::N,max_iter,tol) where N <: AbstractFloat
 
     x = x_0/norm(x_0)
     iterations = 0

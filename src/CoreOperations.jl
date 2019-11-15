@@ -204,7 +204,7 @@ end
   Finds the non-zeros in a k-dimensional array and returns the list of the
 indices associated along with a count of the non-zeros.
 -----------------------------------------------------------------------------"""
-@generated function find_nnz(A::Array{N,k}) where {N<:Number,k}
+@generated function find_nnz(A::Array{N,k}) where {N<:AbstractFloat,k}
     quote
         n = size(A)[1]
         y = Array{Tuple{Array{Int,1},N},1}(undef,n^k)
@@ -260,7 +260,7 @@ function get_sub_tensor(A::Ten,indices::T,
 	end
 
 	incident_edges = find_edge_incidence(A)
-	sub_tensor_edges = Array{Tuple{Array{Int,1},Number}}(undef,0)
+	sub_tensor_edges = Array{Tuple{Array{Int,1},AbstractFloat}}(undef,0)
 
 	for v_i in indices
 		for (V,val) in get(incident_edges,v_i,[])
@@ -322,7 +322,7 @@ Input:
     An array of pairs which contain the indices in the first element, and the
     value in the second element. Note each edge's indices must be in range.
 -----------------------------------------------------------------------------"""
-function add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+function add_edges!(A::SSSTensor,edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
     #check edges' validity
     for (indices,_) in edges
         sort!(indices)
@@ -357,7 +357,7 @@ Inputs:
 
 Output:
 -------
-* B - (Array{Number,k})
+* B - (Array{AbstractFloat,k})
 
     The corresponding dense tensor representation of A.
 -----------------------------------------------------------------------------"""
@@ -390,7 +390,7 @@ Inputs:
 *
 Output:
 -------
-* B - (Array{Number,k})
+* B - (Array{AbstractFloat,k})
 
     The corresponding dense tensor representation of A.
 -----------------------------------------------------------------------------"""

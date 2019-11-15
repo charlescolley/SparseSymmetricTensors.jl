@@ -36,7 +36,7 @@ function permute_tensor!(A::SSSTensor,p::Array{Int,1})
   @assert length(p) == A.cubical_dimension
   @assert Set(1:length(p)) == Set(p)  #check for a proper permutation
 
-  permuted_edges = Dict{Array{Int,1},Number}()
+  permuted_edges = Dict{Array{Int,1},AbstractFloat}()
   for (indices,val) in A.edges
     permuted_edges[sort(map(i->p[i],indices))] = val
   end
@@ -222,7 +222,7 @@ edges associated with that edge.
 
  Output:
  -------
-* edge_incidence - (Dict{Int,Set{Tuple{Array{Int,1},Number}},1})
+* edge_incidence - (Dict{Int,Set{Tuple{Array{Int,1},AbstractFloat}},1})
 
     The dictionary which links all vertices to the hyper edges they're contained
     within.
@@ -231,7 +231,7 @@ TODO: May be good to create a version where you can request the incidence for a
 particular vertex
 -----------------------------------------------------------------------------"""
 function find_edge_incidence(A::Ten) where {Ten <: AbstractSSTen}
-  edge_incidence = Dict{Int,Set{Tuple{Array{Int,1},Number}}}()
+  edge_incidence = Dict{Int,Set{Tuple{Array{Int,1},AbstractFloat}}}()
 
   for (indices,val) in A
 

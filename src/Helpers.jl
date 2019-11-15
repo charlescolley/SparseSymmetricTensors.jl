@@ -38,7 +38,7 @@ reduces the contents of the second dicionary into the first. When two keys exist
 in both dictionaries, their values are summed together.
 -----------------------------------------------------------------------------"""
 function reduce_dictionaries!(D1::Dict{Array{Int,1},N},
-                              D2::Dict{Array{Int,1},N}) where N <: Number
+                              D2::Dict{Array{Int,1},N}) where N <: AbstractFloat
 
     for (key,val) in D2
         if haskey(D1,key)
@@ -215,7 +215,7 @@ Output:
 
     The resulting dictionary which has the edges aggregated together.
 -----------------------------------------------------------------------------"""
-function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
     edge_dict = Dict()
 
     for (indices, weight) in edges
@@ -228,12 +228,12 @@ function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
     return edge_dict
 end
 
-function reduce_edges(edges::Dict{Array{Int,1},N}) where N <: Number
+function reduce_edges(edges::Dict{Array{Int,1},N}) where N <: AbstractFloat
     return edges
 end
 
 function reduce_edges!(edge_dict::Dict{Array{Int,1},N},
-                       edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+                       edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
     for (indices, weight) in edges
         if haskey(edge_dict,indices)
             edge_dict[indices] += weight
@@ -249,7 +249,7 @@ end
 
   rewrites the indices in the hyper edges to index from 1 instead of 0.
 -----------------------------------------------------------------------------"""
-function redo_indexing!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+function redo_indexing!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
     order = length(hyperedges[1][1])
 
     for i = 1:length(hyperedges)
@@ -264,7 +264,7 @@ end
 
   rewrites the vertices indices in the
 -----------------------------------------------------------------------------"""
-function remap_indices!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+function remap_indices!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
     order = length(hyperedges[1][1])
 
     new_id = 1

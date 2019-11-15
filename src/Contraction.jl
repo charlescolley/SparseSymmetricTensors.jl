@@ -36,12 +36,12 @@ Input:
 
 Output:
 -------
-* condensed_dict - (Dict{Array{Int,1},Number}
+* condensed_dict - (Dict{Array{Int,1},AbstractFloat}
 
     The hyper edges in the lower order tensor which are formed by contracting
     the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
-function contract_edge(e::Tuple{Array{Int,1},M},x::Array{N,1},k::Int) where {N <: Number, M<:Number}
+function contract_edge(e::Tuple{Array{Int,1},M},x::Array{N,1},k::Int) where {N <: AbstractFloat, M<:AbstractFloat}
     order = length(e)
 
     (indices,val) = e
@@ -77,23 +77,23 @@ the vector x, where k is the order of the hyper edge.
 
 Input:
 ------
-* e -(Tuple(Array{Int,1},Number)):
+* e -(Tuple(Array{Int,1},AbstractFloat)):
 
     a list of sorted indices paired with an edge value. Note that the list of
     indices corresponds to multiple sets of indices because we consider all
     permutations.
-* x -(Array{Number,1})
+* x -(Array{AbstractFloat,1})
 
     The vector of the same dimenionality of the tensor, to contract with.
 
 Output:
 -------
-* contraction_vals - (Array{Tuple{Array{Int,1},Number}})
+* contraction_vals - (Array{Tuple{Array{Int,1},AbstractFloat}})
 
     The hyper edges in the lower order tensor which are formed by contracting
     the vector along the hyperedge e.
 -----------------------------------------------------------------------------"""
-function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Number
+function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: AbstractFloat
     (indices,val) = e
     order = length(indices)
 
@@ -122,10 +122,10 @@ loops.
 
 Input:
 ------
-* A -(SSSTensor or Array{Number,k}):
+* A -(SSSTensor or Array{AbstractFloat,k}):
 
     The tensor to contract.
-* x - (Array{Number,1}):
+* x - (Array{AbstractFloat,1}):
 
     A vector of numbers to contract with.
 * m - (Int)
@@ -140,7 +140,7 @@ Output:
     sparse, and dense otherwise. When the output is second order, and A is
     sparse, then the output will be a sparse matrix.
 -----------------------------------------------------------------------------"""
-function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: Number}
+function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: AbstractFloat}
     @assert length(x) == A.cubical_dimension
     k = order(A)
     @assert 0 < m <= k
@@ -193,7 +193,7 @@ function contract(A::SSSTensor, x::Array{N,1},m::Int) where {N <: Number}
 end
 
 #Dense Case
-function contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: Number,N <: Number,k}
+function contract(A::Array{N,k}, x::Array{M,1},m::Int64) where {M <: AbstractFloat,N <: AbstractFloat,k}
 
     return dense_contract(A,x,zeros(Int,repeat([0],m)...),
 	                      zeros(Int,repeat([0],k-m)...))
@@ -201,7 +201,7 @@ end
 
 @generated function dense_contract(A::Array{N,k}, x::Array{M,1},
                                    B::Array{Int,m}, C::Array{Int,p}) where
-								   {M<:Number,N<:Number,k,m,p}
+								   {M<:AbstractFloat,N<:AbstractFloat,k,m,p}
     quote
         n = size(A)[1]
         @assert n == length(x)
@@ -235,16 +235,16 @@ Inputs
 * A -(SSSTensor):
 
     The tensor to contract.
-* x - (Array{Number,1}):
+* x - (Array{AbstractFloat,1}):
 
     A vector of numbers to contract with.
 Outputs
 -------
-* y - (Array{Number,1}):
+* y - (Array{AbstractFloat,1}):
 
     The output vector of Ax^{k-1}.
 -----------------------------------------------------------------------------"""
-function contract_k_1(A::Ten, x::Array{N,1}) where {N <: Number,Ten <: AbstractSSTen}
+function contract_k_1(A::Ten, x::Array{N,1}) where {N <: AbstractFloat,Ten <: AbstractSSTen}
     @assert length(x) == A.cubical_dimension
 
     new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
@@ -271,7 +271,7 @@ end
 of the array Vs.
 
 -----------------------------------------------------------------------------"""
-function contract_multi(A::SSSTensor, Vs::Array{N,2}) where N <: Number
+function contract_multi(A::SSSTensor, Vs::Array{N,2}) where N <: AbstractFloat
   k = order(A)
   n,m = size(Vs)
   @assert m <= k
@@ -295,7 +295,7 @@ function contract_multi(A::SSSTensor, Vs::Array{N,2}) where N <: Number
 end
 
 #TODO: make this take in an arbitrary number of vectors.
-function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: Number
+function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: AbstractFloat
   return contract_multi(A,hcat(v,u))
 end
 
@@ -306,7 +306,7 @@ end
 
 -----------------------------------------------------------------------------"""
 function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n::Int,
-                      x::Array{N,1}) where N <: Number
+                      x::Array{N,1}) where N <: AbstractFloat
 
 	rows, ord = size(indices)
 
@@ -328,7 +328,7 @@ end
 TODO: add assertion checks
 -----------------------------------------------------------------------------"""
 function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
-                      x::Array{N,1},y::Array{N,1}) where N <: Number
+                      x::Array{N,1},y::Array{N,1}) where N <: AbstractFloat
 
 	rows, ord = size(indices)
 	n = size(y)[1]
@@ -357,13 +357,13 @@ Inputs:
     2D array with all the indices of the hyper edges in the tensor. Note that
     the number of rows is not necesarily equal to the non-zeros in the tensors.
     The indices of each row is assumed to be sorted in increasing order.
-* nnz_val -  (N <: Number):
+* nnz_val -  (N <: AbstractFloat):
 
     The non-zero associated with the hyper edges.
-* x - (Array{N <: Number, 1}):
+* x - (Array{N <: AbstractFloat, 1}):
 
     The vector to contract the hyper edge with.
-* res_val - (Array{N <:Number, 1}):
+* res_val - (Array{N <:AbstractFloat, 1}):
 
     The location to update the solution to. res is assumed to be initialized and
     so the values are simply added to the entries of y, this is done because
@@ -407,7 +407,7 @@ end
   Contracts the vector x with the tensor to all but one mode
 
 -----------------------------------------------------------------------------"""
-function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: Number}
+function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: AbstractFloat}
 	@assert A.cubical_dimension == length(x)
 
 	y = zeros(A.cubical_dimension) #resulting vector

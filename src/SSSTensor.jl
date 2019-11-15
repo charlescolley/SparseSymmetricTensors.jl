@@ -61,7 +61,7 @@ Base.length(A::COOTen) = A.unique_nnz
 
 
 mutable struct SSSTensor <: AbstractSSTen
-  edges::Dict{Array{Int,1},Number}
+  edges::Dict{Array{Int,1},AbstractFloat}
   cubical_dimension::Int
 
   SSSTensor(e,n) =
@@ -75,7 +75,7 @@ mutable struct SSSTensor <: AbstractSSTen
   end
 
   #Dense tensor constructor
-  function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: Number,k}
+  function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: AbstractFloat,k}
 
     if any(size(A) .> n)
 	  error("input Tensor size ",size(A),
@@ -102,7 +102,7 @@ include("HyperGraphAlgos.jl")
 include("NumericalRoutines.jl")
 
 
-@generated function SSSTensor_from_Array(A::Array{N,k}) where {N<:Number,k,p}
+@generated function SSSTensor_from_Array(A::Array{N,k}) where {N<:AbstractFloat,k,p}
     quote
 
         shape = size(A)
@@ -154,7 +154,7 @@ Outputs:
 -----------------------------------------------------------------------------"""
 function SSSTensor_verifier(edges::Union{Array{Tuple{Array{Int,1},N},1},
                                          Dict{Array{Int64,1},N}},
-										 n::Int) where N <: Number
+										 n::Int) where N <: AbstractFloat
     max_index = SSSTensor_verifier(edges)
     return max_index <= n
 end
@@ -170,7 +170,7 @@ function for the SSSTensor constructors.
 
 Input:
 ------
-* edges - (Dict{Array{Int64,1},Number}):
+* edges - (Dict{Array{Int64,1},AbstractFloat}):
 
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
@@ -182,7 +182,7 @@ Output:
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
-function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: Number
+function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: AbstractFloat
     max_index = -Inf
     order = -1
     for (indices,_) in edges
@@ -229,7 +229,7 @@ Output:
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
-function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Number
+function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
   max_index = -Inf
   order = -1
   for (indices,_) in edges
