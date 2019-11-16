@@ -21,19 +21,20 @@ end
 
 @testset "HyperGraphAlgos Tests" begin
 
-
+#=
     @testset "Largest Connected Component Tests" begin
 
-        _, indices, vals = set_up(n,ord,nnz)
-        indices = cat(indices,(n+1)*ones(Int,ord)',1)
+#        _, indices, vals = set_up(n,ord,nnz)
+#        indices = cat(indices,(n+1)*ones(Int,ord)',1)
+        indices = [1 1 2 3; 1 2 2 2; 1 3 3 3;4 4 4 4] #fully connected
+        vals = [1.0,2.0,3.0,4.0]
 
         A = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz])
-
-        get_largest_component(A::SSSTensor,filepath=tmppath)
+        sub_tensor,lcc_indices = get_largest_component(A::SSSTensor,filepath=tmppath)
 
 
     end
-
+=#
     #do we need order tests?
     @testset "Connected Components Tests" begin
         indices = [1 1 2 3; 1 2 2 2; 1 3 3 3] #fully connected

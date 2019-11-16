@@ -156,7 +156,7 @@ Outputs:
   Array with the indices of the vertices from the original graph which comprise
   the largest connected component.
 -----------------------------------------------------------------------------"""
-function get_largest_component(A::SSSTensor,filepath::String="")
+function get_largest_component(A::Ten,filepath::String="") where {Ten <: AbstractSSTen}
 
     if !isempty(filepath) #if path is passed in, look for lcc file
     	lcc_file = alterFilename(filepath,".lcc",keep_postfix=false)
@@ -173,10 +173,10 @@ function get_largest_component(A::SSSTensor,filepath::String="")
 					for (i,line) in zip(1:lcc_size,eachline(f))
 					  lcc_indices[i] = parse(Int,chomp(line))
 					end
-					subtensor = get_sub_tensor(A,lcc_indices,remap=true)
+					subtensor = get_sub_tensor(A,lcc_indices,true)
 				end
+				return subtensor,lcc_indices
 			end
-			return subtensor,lcc_indices
 		end
 	end
 
@@ -196,7 +196,6 @@ function get_largest_component(A::SSSTensor,filepath::String="")
 			header="$(length(lcc_indices))\t$(A.cubical_dimension)\n"
 			write(f,header)
 			if lcc_indices == A.cubical_dimension
-				println("made it")
 				return
 			end
 			for v_i in lcc_indices
@@ -205,7 +204,7 @@ function get_largest_component(A::SSSTensor,filepath::String="")
 		end
 		println("made it")
 	end
-	get_sub_tensor(A,lcc_indices,remap=true),lcc_indices
+	get_sub_tensor(A,lcc_indices,true),lcc_indices
 end
 
 """-----------------------------------------------------------------------------
