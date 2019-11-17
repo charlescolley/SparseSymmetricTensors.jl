@@ -13,7 +13,7 @@ using .ssten
 @testset "DictTen Constructor Tests" begin
 
     n = 5
-    valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1)]
+    valid_edges = [([1,2,3],1.0),([1,2,2],-1.0),([3,3,3],1.0)]
     unordered_edge = [([2,3,1],1.0)]
     negative_index = [([-1,2,3],1.0)]
 
@@ -26,6 +26,7 @@ using .ssten
         @test_throws ErrorException ssten.SSSTensor(negative_index,1)
         @test_throws ErrorException ssten.SSSTensor(negative_index,n) #neg index
         @test_throws ErrorException ssten.SSSTensor(negative_index)
+
     end
 
     @testset "Dense Tensor Constructor" begin
@@ -35,6 +36,7 @@ using .ssten
         @test_throws ErrorException ssten.SSSTensor(non_sym_tensor)
         @test_throws ErrorException ssten.SSSTensor(sym_tensor,1) # too small cubical dim
         @test_throws ErrorException ssten.SSSTensor(non_sym_tensor,1)
+
     end
 
     @testset "Dictionary Constructor" begin
@@ -74,7 +76,6 @@ end
          A = ssten.COOTen(valid_indices,rand(3))
         @test A.cubical_dimension == maximum(valid_indices)
 
-
         #all params
         @test_throws ErrorException ssten.COOTen(valid_indices, rand(2),10) #mis-matched dimensions
         @test_throws ErrorException ssten.COOTen(unsorted_indices, valid_values,10) #unsorted rows
@@ -93,12 +94,14 @@ end
 
     end
 
+    @test_throws ErrorException ssten.COOTen()
 
     @testset "COOTEN iterator" begin
         valid_indices = [1 2 3; 2 2 3; 1 2 4]
         valid_values = [1.0,2.0,3.0]
 
     end
+
 
 end
 
