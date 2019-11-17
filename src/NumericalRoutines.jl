@@ -198,7 +198,7 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
             if iterations >= max_iter
                 @warn("maximum iterations reached")
             end
-            return z, x, lambda_k, iterations
+            return z, lambda_k, iterations
         else
             lambda_k_1 = lambda_k
             x = z
