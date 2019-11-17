@@ -34,21 +34,39 @@ struct COOTen <: AbstractSSTen
 	cubical_dimension::Int
 	order::Int
 	unique_nnz::Int
-	edges::Vector{Tuple{Array{Int,1},Float64}}
+	indices::Array{Int,2}
+	vals::Array{Float64,1}
 
-	function COOTen(indices)
-		cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices)
-	    return new(cubical_dimension,order,unique_nnz,edges)
+	#edges::Vector{Tuple{Array{Int,1},Float64}}
+
+	function COOTen(indices,nocheck::Bool=false)
+		if nocheck
+			unique_nnz, order = size(indices)
+			return new(maximum(indices),order,unique_nnz,indices, ones(unique_nnz))
+	    else
+			cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices)
+		    return new(cubical_dimension,order,unique_nnz,indices,ones(unique_nnz))
+		end
 	end
 
-	function COOTen(indices,values)
-		cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices,values)
-	    return new(cubical_dimension,order,unique_nnz,edges)
+	function COOTen(indices,values,nocheck::Bool=false)
+		if nocheck
+			unique_nnz, order = size(indices)
+			return new(maximum(indices),order,unique_nnz,indices, values)
+	    else
+			cubical_dimension,unique_nnz,order,indices,values = COOTenVerifier(indices,values)
+	   	    return new(cubical_dimension,order,unique_nnz,indices,values)
+		end
 	end
 
-	function COOTen(indices,values,n)
-		_,unique_nnz,order,edges = COOTenVerifier(indices,values,n)
-	    return new(n,order,unique_nnz,edges)
+	function COOTen(indices,values,n,nocheck::Bool=false)
+		if nocheck
+			order,unique_nnz = size(indices)
+			return new(n,order,unique_nnz,indices,values)
+	    else
+			_,unique_nnz,order,indices,values = COOTenVerifier(indices,values,n)
+			return new(n,order,unique_nnz,indices,values)
+		end
 	end
 
 end
@@ -56,7 +74,7 @@ end
 
 #iterators for COOTen
 Base.iterate(A::COOTen, state=1) =
-    state > length(A) ? nothing : (A.edges[state],state +1)
+    state > length(A) ? nothing : ((A.indices[state,:],A.vals[state]),state +1)
 Base.length(A::COOTen) = A.unique_nnz
 
 
@@ -300,11 +318,11 @@ Output:
 
   The number of modes of the tensor.
 
-* indices - (SMatrix)
+* indices - (Array{Int,2})
 
   A static matrix made from the indices passed in.
 
-* values - (SVector)
+* values - (Array{AbstractFloat,1})
 
   A static vector made from the values passed in.
 -----------------------------------------------------------------------------"""
@@ -353,11 +371,9 @@ function COOTenVerifier(indices::Array{Int,2},
 		end
 	end
 
-	#ord = Tuple{order}
-	return cubical_dimension,unique_nnz,order,
-	       [((indices[i,:]),values[i]) for i in 1:unique_nnz]
+	return cubical_dimension,unique_nnz,order,indices, values
+	#       [((indices[i,:]),values[i]) for i in 1:unique_nnz]
 
 end
-
 
 end #module end
