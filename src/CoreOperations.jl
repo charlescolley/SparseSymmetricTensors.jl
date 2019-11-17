@@ -119,7 +119,9 @@ end
     The subtype of AbstractSSTen to return
 
   * nochecks - (optional Bool):
-
+    stops constructors from checking the validity of the input, only use if
+    absolutely sure the file is properly formatted for the tensor (with the
+    exception of 0 indexing). 
 
   Outputs:
   --------
@@ -241,7 +243,8 @@ end
   This function produced a subtensor which only containes the vertices specified
 in the array indices. Note that there must be hyper edges shared between the
 vertices in indices, otherwise the SSSTensor constructor will throw an error
-when given an empty list of hyperedges.
+when given an empty list of hyperedges. Does not run the input checks on the
+subtensor created.
 
 Input:
 ------
