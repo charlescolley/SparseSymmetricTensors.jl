@@ -79,33 +79,33 @@ Base.length(A::COOTen) = A.unique_nnz
 
 
 mutable struct SSSTensor <: AbstractSSTen
-  edges::Dict{Array{Int,1},AbstractFloat}
-  cubical_dimension::Int
+    edges::Dict{Array{Int,1},AbstractFloat}
+    cubical_dimension::Int
 
-  SSSTensor(e,n) =
-    SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
-    # Need to adjust the error message on this constructor
+    SSSTensor(e,n) =
+        SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
+       # Need to adjust the error message on this constructor
 
-  #Edge List constructor
-  function SSSTensor(e)
-    n = SSSTensor_verifier(e)
-    new(reduce_edges(e),n)
-  end
-
-  #Dense tensor constructor
-  function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: AbstractFloat,k}
-
-    if any(size(A) .> n)
-	  error("input Tensor size ",size(A),
-	        " has dimension too large for input cubical dimension ",n)
-	else
-      edge_dict, n = SSSTensor_from_Array(A)
-	  new(edge_dict,n)
+	#Edge List constructor
+	function SSSTensor(e)
+		n = SSSTensor_verifier(e)
+		new(reduce_edges(e),n)
 	end
-  end
 
-  #function SSSTensor(path_file::String)
-  #TODO: load .ssten file
+	#Dense tensor constructor
+	function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: AbstractFloat,k}
+
+		if any(size(A) .> n)
+		    error("input Tensor size ",size(A),
+			      " has dimension too large for input cubical dimension ",n)
+		else
+			edge_dict, n = SSSTensor_from_Array(A)
+			new(edge_dict,n)
+		end
+	end
+
+	#function SSSTensor(path_file::String)
+	#TODO: load .ssten file
 end
 
 #write iterators for COOTen
