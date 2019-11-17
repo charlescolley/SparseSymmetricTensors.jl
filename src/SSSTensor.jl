@@ -39,7 +39,7 @@ struct COOTen <: AbstractSSTen
 
 	#edges::Vector{Tuple{Array{Int,1},Float64}}
 
-	function COOTen(indices,nocheck::Bool=false)
+	function COOTen(indices::Array{Int,2},nocheck::Bool=false)
 		if nocheck
 			unique_nnz, order = size(indices)
 			return new(maximum(indices),order,unique_nnz,indices, ones(unique_nnz))
@@ -49,7 +49,8 @@ struct COOTen <: AbstractSSTen
 		end
 	end
 
-	function COOTen(indices,values,nocheck::Bool=false)
+	function COOTen(indices::Array{Int,2},values::Array{N,1},
+		            nocheck::Bool=false) where N <: AbstractFloat
 		if nocheck
 			unique_nnz, order = size(indices)
 			return new(maximum(indices),order,unique_nnz,indices, values)
@@ -59,7 +60,8 @@ struct COOTen <: AbstractSSTen
 		end
 	end
 
-	function COOTen(indices,values,n,nocheck::Bool=false)
+	function COOTen(indices::Array{Int,2},values::Array{N,1},n::Int,
+		            nocheck::Bool=false) where N <: AbstractFloat
 		if nocheck
 			order,unique_nnz = size(indices)
 			return new(n,order,unique_nnz,indices,values)
@@ -69,6 +71,7 @@ struct COOTen <: AbstractSSTen
 		end
 	end
 
+	COOTen() = error("empty hyper-edge list.")
 end
 
 
@@ -82,15 +85,31 @@ mutable struct SSSTensor <: AbstractSSTen
     edges::Dict{Array{Int,1},AbstractFloat}
     cubical_dimension::Int
 
-    SSSTensor(e,n) =
-        SSSTensor_verifier(e,n) ? new(reduce_edges(e),n) : error("invalid indices")
+    function SSSTensor(e::Union{Array{Tuple{Array{Int,1},N},1},
+							    Dict{Array{Int64,1},N}},
+					   n::Int,nocheck::Bool=false) where {N <: AbstractFloat}
+	     if nocheck
+    		 new(reduce_edges(e),n)
+		 else
+
+			 if SSSTensor_verifier(e,n)
+				 new(reduce_edges(e),n)
+			 else
+				 error("Cubical dimension $(n) too small.")
+			 end
+		 end
        # Need to adjust the error message on this constructor
+	end
 
 	#Edge List constructor
-	function SSSTensor(e)
-		n = SSSTensor_verifier(e)
+	function SSSTensor(e::Union{Array{Tuple{Array{Int,1},N},1},
+							    Dict{Array{Int64,1},N}},
+					   nocheck::Bool=false) where {N <: AbstractFloat}
+		n = SSSTensor_verifier(e,nocheck)
 		new(reduce_edges(e),n)
 	end
+
+	SSSTensor() = error("empty hyper-edge list.")
 
 	#Dense tensor constructor
 	function SSSTensor(A::Array{N,k},n::Int=typemax(Int)) where {N <: AbstractFloat,k}
@@ -173,13 +192,13 @@ Outputs:
 function SSSTensor_verifier(edges::Union{Array{Tuple{Array{Int,1},N},1},
                                          Dict{Array{Int64,1},N}},
 										 n::Int) where N <: AbstractFloat
-    max_index = SSSTensor_verifier(edges)
+    max_index = SSSTensor_verifier(edges,false)
     return max_index <= n
 end
 
 #UNTESTED
 """-----------------------------------------------------------------------------
-    SSSTensor_verifier(edges)
+    SSSTensor_verifier(edges,nocheck)
 
   This function takes in a list of edges and checks whether or not the edges are
 appropriate for a super symmetric tensor. Finds the largest index and over all
@@ -193,6 +212,9 @@ Input:
     An array which contains Tuples of index arrays and paired edge values
     associated. The indices must be sorted.
 
+* nocheck - (optional Bool):
+
+
 Output:
 -------
 * max_index - (Int):
@@ -200,32 +222,35 @@ Output:
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
-function SSSTensor_verifier(edges::Dict{Array{Int64,1},N}) where N <: AbstractFloat
+function SSSTensor_verifier(edges::Dict{Array{Int64,1},N},
+                            nocheck::Bool=false) where N <: AbstractFloat
     max_index = -Inf
     order = -1
     for (indices,_) in edges
         if order == -1
             order = length(indices)
-        else
-            if length(indices) != order
-                error(string("hyperedge ",indices," must be order ",order))
-            end
         end
 
-        if !issorted(indices)
-		  error(string(indices, " must be sorted ascendingly"))
-        end
-		if any(x -> x < 1,indices)
-		  error(string(indices," has an index < 1"))
-        end
-        if indices[end] > max_index
-            max_index = indices[end]
-        end
+		if !nocheck  #assure input meets invariant standards
+			if length(indices) != order
+                error("hyperedge $(indices) must be order $(order)")
+            end
+			if !issorted(indices)
+			  error("$(indices) must be sorted ascendingly")
+			end
+			if any(x -> x < 1,indices)
+			  error("$(indices) has an index < 1")
+			end
+		end
+
+		if indices[end] > max_index
+			max_index = indices[end]
+		end
     end
 
     return max_index
 end
-
+#=
 """-----------------------------------------------------------------------------
     SSSTensor_verifier(edges)
 
@@ -247,7 +272,9 @@ Output:
     An integer indicating the maximum index, returns 0 if an edge is found not
     to be sorted.
 -----------------------------------------------------------------------------"""
-function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
+=#
+function SSSTensor_verifier(edges::Array{Tuple{Array{Int,1},N},1},
+                            nocheck::Bool=false) where N <: AbstractFloat
   max_index = -Inf
   order = -1
   for (indices,_) in edges
