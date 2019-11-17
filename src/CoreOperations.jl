@@ -109,11 +109,17 @@ end
   -------
   * filepath - (String):
     The .ssten file to load from. Throws an error if not .ssten formatting.
+
   * enforceFormatting - (Optional Bool):
     Sorts each of the hyperedge indices before storing them. Can be used as a
     quick fix for a improperly formatted file. Not recommended as it will add
     to memory usage and run time.
+
   * type - (optional String):
+    The subtype of AbstractSSTen to return
+
+  * nochecks - (optional Bool):
+
 
   Outputs:
   --------
@@ -122,7 +128,8 @@ end
 
  TODO: Maybe it would be better to assume .ssten format is indexed by 1.
 -----------------------------------------------------------------------------"""
-function load(filepath::String,enforceFormatting::Bool=false,type::String="DICTen")
+function load(filepath::String,enforceFormatting::Bool=false,
+              type::String="DICTen",nochecks::Bool=false)
 	#check path validity
 	@assert filepath[end-5:end] == ".ssten"
 
@@ -136,18 +143,21 @@ function load(filepath::String,enforceFormatting::Bool=false,type::String="DICTe
 
 		#hyperedges = Array{Tuple{Array{Int64,1},Float64},1}(undef, m)
 
-		i = 0
-		for line in eachline(file)
-			i += 1
+		i = 1
+		@inbounds for line in eachline(file)
 			entries = split(chomp(line),'\t')
 			indices[i,:] = [parse(Int,elem) for elem in entries[1:end-1]]
+			if enforceFormatting
+				sort!(indices[i,:])
+			end
 			values[i] = parse(Float64,entries[end])
+			i += 1
 		end
 
 		#check for 0 indexing
 		zero_indexed = false
 
-		for i in 1:m
+		@inbounds for i in 1:m
 		    if indices[i,1] == 0
     			zero_indexed = true
 				break
@@ -159,9 +169,12 @@ function load(filepath::String,enforceFormatting::Bool=false,type::String="DICTe
 		end
 
 		if type == "DICTen"
+			if nochecks
+				warn("nocheck unimplemented in DictTen currently")
+			end
 			return SSSTensor([(indices[i,:],values[i]) for i in 1:m],n)
 		elseif type == "COOTen"
-			return COOTen(indices,values,n)
+			return COOTen(indices,values,n,nochecks)
 		else
 			error("type:$(type) not defined.\n Curently supporting:'DICTen','COOTen'.")
 		end
@@ -256,7 +269,7 @@ function get_sub_tensor(A::Ten,indices::T,
 	@assert all(indices .> 0)
 
 	if T == Array{Int,1}
-		indices = Set(indices)
+		indices = Set(indices) #replace with a bitmap
 	end
 
 	incident_edges = find_edge_incidence(A)
