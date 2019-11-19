@@ -39,7 +39,6 @@ in both dictionaries, their values are summed together.
 -----------------------------------------------------------------------------"""
 function reduce_dictionaries!(D1::Dict{Array{Int,1},N},
                               D2::Dict{Array{Int,1},N}) where N <: AbstractFloat
-
     for (key,val) in D2
         if haskey(D1,key)
             D1[key] += val
@@ -75,7 +74,7 @@ Note
 TODO: Change to include tuples too.
 -----------------------------------------------------------------------------"""
 function multiplicity_factor(indices::Array{Int,1})
-    multiplicities = Dict()
+    multiplicities = Dict{Int,Int}()
 
     for index in indices
 
@@ -225,6 +224,7 @@ function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: Abstract
             edge_dict[indices] = weight
         end
     end
+
     return edge_dict
 end
 
