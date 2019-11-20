@@ -73,7 +73,35 @@ Note
 
 TODO: Change to include tuples too.
 -----------------------------------------------------------------------------"""
+function multiplicity_factor(indices::Array{Int,1},multiplicities::Dict{Int,Int})
+
+    #reset multiplicities dictionary
+    for key in keys(multiplicities)
+        delete!(multiplicities,key)
+    end
+
+    for index in indices
+
+        if haskey(multiplicities,index)
+            multiplicities[index] += 1
+        else
+            multiplicities[index] = 1
+        end
+    end
+
+    #copy into format that can be passed to multinomial
+    final_counts = zeros(Int,length(indices))
+    i = 1
+    for (_,val) in multiplicities
+        final_counts[i] = Int(val)
+        i += 1
+    end
+
+    return multinomial(final_counts...)
+end
+
 function multiplicity_factor(indices::Array{Int,1})
+
     multiplicities = Dict{Int,Int}()
 
     for index in indices
@@ -215,7 +243,7 @@ Output:
     The resulting dictionary which has the edges aggregated together.
 -----------------------------------------------------------------------------"""
 function reduce_edges(edges::Array{Tuple{Array{Int,1},N},1}) where N <: AbstractFloat
-    edge_dict = Dict()
+    edge_dict = Dict{Array{Int,1},N}()
 
     for (indices, weight) in edges
         if haskey(edge_dict,indices)
@@ -268,7 +296,7 @@ function remap_indices!(hyperedges::Array{Tuple{Array{Int,1},N},1}) where N <: A
     order = length(hyperedges[1][1])
 
     new_id = 1
-    remapping_dict = Dict()
+    remapping_dict = Dict{Int,Int}()
 
     for i =1:length(hyperedges)
 

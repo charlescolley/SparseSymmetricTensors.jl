@@ -98,7 +98,7 @@ function contract_edge_k_1(e::Tuple{Array{Int,1},N},x::Array{N,1}) where N <: Ab
     order = length(indices)
 
     visited_sub_indices = Set{Array{Int,1}}()
-    contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,0)
+    contraction_vals = Array{Tuple{Array{Int,1},N}}(undef,1)
 
     for i in 1:order
         sub_edge = deleteat!(copy(indices),i)
@@ -312,6 +312,7 @@ function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n::Int,
 
 	y = zeros(n) #resulting vector
 
+
 	for i=1:rows
 		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
 	end
@@ -337,6 +338,7 @@ function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
 	@inbounds for i=1:n
 		y[i] = 0.0
 	end
+
 
 	for i=1:rows
 		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
@@ -370,13 +372,14 @@ Inputs:
     this function is considered a helper function to the contract function o
     verloaded for the dense array representation of symmetric tensors.
 -----------------------------------------------------------------------------"""
-@inline function contract_edge_k_1!(edge::Tuple{Union{Array{Int,1},
-                                                      SVector{M,T}},N},
-                                    x::Array{N,1},res::Array{N,1})where {M,T, N <: AbstractFloat}
+@inline function contract_edge_k_1!(edge::Tuple{Array{Int,1},N},
+                                    x::Array{N,1},res::Array{N,1},
+									sub_edge::Array{Int,1},
+									multiplicities::Dict{Int,Int})where {M,T, N <: AbstractFloat}
 	(indices, nnz_val) = edge
     ord = length(indices)
 	prev_index = -1
-	sub_edge = Array{Int,1}(undef,ord - 1)
+	#sub_edge = Array{Int,1}(undef,ord - 1)
 
 	for j = 1:ord
 		#only compute contraction once per index
@@ -389,7 +392,7 @@ Inputs:
 				i += 1
 			end
 
-			val = nnz_val * multiplicity_factor(sub_edge)
+			val = nnz_val * multiplicity_factor(sub_edge,multiplicities)
 			for k in sub_edge
 				val *= x[k]
 			end
@@ -412,8 +415,10 @@ function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: AbstractFloat}
 
 	y = zeros(A.cubical_dimension) #resulting vector
 
+	sub_edge = Array{Int,1}(undef,A.order - 1)
+	multiplicities = Dict{Int,Int}()
 	for edge in A
-		contract_edge_k_1!(edge,x,y)
+		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities)
 	end
 
 	return y
