@@ -73,11 +73,17 @@ Note
 
 TODO: Change to include tuples too.
 -----------------------------------------------------------------------------"""
-function multiplicity_factor(indices::Array{Int,1},multiplicities::Dict{Int,Int})
+function multiplicity_factor(indices::Array{Int,1},multiplicities::Dict{Int,Int},
+                             final_counts::Array{Int,1})
 
     #reset multiplicities dictionary
     for key in keys(multiplicities)
         delete!(multiplicities,key)
+    end
+
+    #reset final_counts
+    for i in 1:length(indices)
+        final_counts[i] = 0
     end
 
     for index in indices
@@ -90,10 +96,9 @@ function multiplicity_factor(indices::Array{Int,1},multiplicities::Dict{Int,Int}
     end
 
     #copy into format that can be passed to multinomial
-    final_counts = zeros(Int,length(indices))
     i = 1
     for (_,val) in multiplicities
-        final_counts[i] = Int(val)
+        final_counts[i] = val
         i += 1
     end
 

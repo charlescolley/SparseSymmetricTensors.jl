@@ -300,52 +300,6 @@ function contract(A::SSSTensor,v::Array{N,1},u::Array{N,1}) where N <: AbstractF
 end
 
 """-----------------------------------------------------------------------------
-    contract_k_1(A(type needs to be determined),x,k)
-
-  Contracts the vector x with the tensor to all but one mode
-
------------------------------------------------------------------------------"""
-function contract_k_1(indices::Array{Int,2},nnz::Array{N,1},n::Int,
-                      x::Array{N,1}) where N <: AbstractFloat
-
-	rows, ord = size(indices)
-
-	y = zeros(n) #resulting vector
-
-
-	for i=1:rows
-		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
-	end
-
-	return y
-end
-
-"""-----------------------------------------------------------------------------
-    contract_k_1!(A(type needs to be determined),x,k,y)
-
-  Contracts the vector x with the tensor to all but one mode and saves the
-  resulting vector in the passed in y.
-
-TODO: add assertion checks
------------------------------------------------------------------------------"""
-function contract_k_1!(indices::Array{Int,2},nnz::Array{N,1},
-                      x::Array{N,1},y::Array{N,1}) where N <: AbstractFloat
-
-	rows, ord = size(indices)
-	n = size(y)[1]
-
-	#initialize the output vector to all zeros
-	@inbounds for i=1:n
-		y[i] = 0.0
-	end
-
-
-	for i=1:rows
-		contract_edge_k_1!((indices[i,:],nnz[i]),x,y)
-	end
-end
-
-"""-----------------------------------------------------------------------------
     contract_edge_k_1!(indices,val,x,res)
 
   This function computes the value of contracting one hyper edge with an input
@@ -375,9 +329,11 @@ Inputs:
 @inline function contract_edge_k_1!(edge::Tuple{Array{Int,1},N},
                                     x::Array{N,1},res::Array{N,1},
 									sub_edge::Array{Int,1},
-									multiplicities::Dict{Int,Int})where {M,T, N <: AbstractFloat}
+									multiplicities::Dict{Int,Int},
+									final_counts::Array{Int,1},
+									ord::Int)where {M,T, N <: AbstractFloat}
 	(indices, nnz_val) = edge
-    ord = length(indices)
+    #ord = length(indices)
 	prev_index = -1
 	#sub_edge = Array{Int,1}(undef,ord - 1)
 
@@ -392,7 +348,7 @@ Inputs:
 				i += 1
 			end
 
-			val = nnz_val * multiplicity_factor(sub_edge,multiplicities)
+			val = nnz_val * multiplicity_factor(sub_edge,multiplicities,final_counts)
 			for k in sub_edge
 				val *= x[k]
 			end
@@ -415,12 +371,40 @@ function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: AbstractFloat}
 
 	y = zeros(A.cubical_dimension) #resulting vector
 
+	#preallocate helper functions
 	sub_edge = Array{Int,1}(undef,A.order - 1)
 	multiplicities = Dict{Int,Int}()
+	final_counts = zeros(Int,A.order)
+
 	for edge in A
-		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities)
+		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
 	end
 
 	return y
 end
 
+"""-----------------------------------------------------------------------------
+    contract_k_1(A,x,k)
+
+  Contracts the vector x with the tensor to all but one mode
+
+-----------------------------------------------------------------------------"""
+function contract_k_1!(A::COOTen,x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat}
+	@assert A.cubical_dimension == length(x)
+
+	@inbounds for i in 1:A.cubical_dimension
+		y[i] = zero(N)
+	end
+	y = zeros(A.cubical_dimension) #resulting vector
+
+	#preallocate helper functions
+	sub_edge = Array{Int,1}(undef,A.order - 1)
+	multiplicities = Dict{Int,Int}()
+	final_counts = zeros(Int,A.order)
+
+	for edge in A
+		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
+	end
+
+	return y
+end
