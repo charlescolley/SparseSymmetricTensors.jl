@@ -98,7 +98,7 @@ end
 
 #TODO: add in a loading bar
 """-----------------------------------------------------------------------------
-    load(filepath,NoChecks)
+    load(filepath, enforceFormatting, type, NoChecks)
 
   Loads in a sparse symmetric tensor from a .ssten file. See save for expected
   .ssten file formatting specifications. The routine will check to see if the
@@ -121,14 +121,13 @@ end
   * nochecks - (optional Bool):
     stops constructors from checking the validity of the input, only use if
     absolutely sure the file is properly formatted for the tensor (with the
-    exception of 0 indexing). 
+    exception of 0 indexing).
 
   Outputs:
   --------
   * A - (SSSTensor):
     The Sparse symmetric tensor stored in the file.
 
- TODO: Maybe it would be better to assume .ssten format is indexed by 1.
 -----------------------------------------------------------------------------"""
 function load(filepath::String,enforceFormatting::Bool=false,
               type::String="DICTen",nochecks::Bool=false)
@@ -410,7 +409,7 @@ Output:
 
     The corresponding dense tensor representation of A.
 -----------------------------------------------------------------------------"""
-function flatten(A::SSSTensor)
+function flatten(A::Ten) where {Ten <: AbstractSSTen}
 
 	ord = order(A)
 	nnz = length(A.edges)*factorial(ord)
@@ -419,7 +418,7 @@ function flatten(A::SSSTensor)
 	V = Array{Float64,1}(undef,nnz)
 
 	i = 0
-	for (edge,val) in A.edges
+	for (edge,val) in A
 
 		for indices in unique(permutations(edge))
 			i+=1
