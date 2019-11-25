@@ -63,7 +63,7 @@ struct COOTen <: AbstractSSTen
 	function COOTen(indices::Array{Int,2},values::Array{N,1},n::Int,
 		            nocheck::Bool=false) where N <: AbstractFloat
 		if nocheck
-			order,unique_nnz = size(indices)
+			unique_nnz, order = size(indices)
 			return new(n,order,unique_nnz,indices,values)
 	    else
 			_,unique_nnz,order,indices,values = COOTenVerifier(indices,values,n)
