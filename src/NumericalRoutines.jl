@@ -174,7 +174,6 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
 
     while true
 
-		@show z
 		contract_k_1!(A,x,z)
         if shift != 0
 			z .+= shift*x
@@ -182,7 +181,6 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
 				z .*= -1
 			end
         end
-		@show z
 
         lambda_k = x'*z
 
