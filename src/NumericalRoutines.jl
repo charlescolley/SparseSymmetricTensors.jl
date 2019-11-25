@@ -146,9 +146,9 @@ Input:
     The tolerance in difference between subsequent approximate eigenvalues to
     solve the routine up to.
 
-* display - (optional Bool)
+* display - (optional Int)
 
-    Indicates whether or not to print updates to the user.
+    Indicates how many iterations in between printing to the user.
 
 Output:
 -------
@@ -163,22 +163,23 @@ Output:
     The number of iterations the algorithm ran for.
 -----------------------------------------------------------------------------"""
 function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
-                display::Bool=false) where
+                display::Int=0) where
 				{N <: AbstractFloat, Ten <: AbstractSSTen}
     @assert A.cubical_dimension == length(x_0)
 
+	z = Array{N,1}(undef,A.cubical_dimension)
     x = x_0/norm(x_0)
     iterations = 0
     lambda_k_1 = Inf
 
     while true
 
-        if shift > 0
-            z = contract_k_1(A,x) + shift*x
-        elseif shift == 0
-            z = contract_k_1(A,x)
-        else
-            z = -(contract_k_1(A,x) + shift*x)
+		contract_k_1!(A,x,z)
+        if shift != 0
+			z += shift*x
+			if shift < 0
+				z .*= -1
+			end
         end
 
         lambda_k = x'*z
@@ -190,9 +191,11 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
         iterations += 1
 
 
-		if display
-			@printf("step = %-3d -- λ_k:% 0.12f -- |λ_k - λ_{k-1}| :%0.12f -- res_norm:%0.12f\n",
-					iterations,lambda_k,abs(lambda_k - lambda_k_1),norm(residual))
+		if display != 0
+			if iterations % display == 0
+				@printf("step = %-3d -- λ_k:% 0.12f -- |λ_k - λ_{k-1}| :%0.12f -- res_norm:%0.12f\n",
+						iterations,lambda_k,abs(lambda_k - lambda_k_1),norm(residual))
+			end
 		end
         if norm(residual) < tol || iterations >= max_iter
             if iterations >= max_iter
