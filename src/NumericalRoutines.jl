@@ -174,22 +174,23 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
 
     while true
 
+		@show z
 		contract_k_1!(A,x,z)
         if shift != 0
-			z += shift*x
+			z .+= shift*x
 			if shift < 0
 				z .*= -1
 			end
         end
+		@show z
 
         lambda_k = x'*z
 
         #normalize
 		residual = z - lambda_k*x
-        z /= norm(z)
+        z ./= norm(z)
 
         iterations += 1
-
 
 		if display != 0
 			if iterations % display == 0
@@ -204,7 +205,7 @@ function SSHOPM(A::Ten, x_0::Array{N,1},shift::N,max_iter::Int,tol::N,
             return z, lambda_k, iterations
         else
             lambda_k_1 = lambda_k
-            x = z
+            x = copy(z)
         end
     end
 end
