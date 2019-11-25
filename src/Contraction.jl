@@ -264,6 +264,28 @@ function contract_k_1(A::Ten, x::Array{N,1}) where {N <: AbstractFloat,Ten <: Ab
     return y
 end
 
+function contract_k_1!(A::Ten, x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat,Ten <: AbstractSSTen}
+    @assert length(x) == A.cubical_dimension
+
+    new_edges = Array{Tuple{Array{Int,1},N}}(undef,0)
+	@inbounds for i in 1:A.cubical_dimension
+		y[i] = zero(N)
+	end
+
+    #compute contractions
+    for edge in A.edges
+        contracted_edges = contract_edge_k_1(Tuple(edge),x)
+        push!(new_edges,contracted_edges...)
+    end
+    #reduce edges and copy into new vector
+    edge_dict = reduce_edges(new_edges)
+
+    for (i,v) in edge_dict
+        y[i[1]] = v
+    end
+    return y
+end
+
 """-----------------------------------------------------------------------------
     contract_multi(A,vs)
 
@@ -371,15 +393,20 @@ function contract_k_1(A::COOTen,x::Array{N,1}) where {N <: AbstractFloat}
 
 	y = zeros(A.cubical_dimension) #resulting vector
 
-	#preallocate helper functions
-	sub_edge = Array{Int,1}(undef,A.order - 1)
-	multiplicities = Dict{Int,Int}()
-	final_counts = zeros(Int,A.order)
+	if A.order == 3
+		#need a guarantee of unique indices in the hyper edges.
+		tri_contract!(A,x,y)
+	else
+		#preallocate helper functions
+		sub_edge = Array{Int,1}(undef,A.order - 1)
+		multiplicities = Dict{Int,Int}()
+		final_counts = zeros(Int,A.order)
 
-	for edge in A
-		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
+		for edge in A
+			contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
+		end
+
 	end
-
 	return y
 end
 
@@ -395,16 +422,34 @@ function contract_k_1!(A::COOTen,x::Array{N,1},y::Array{N,1}) where {N <: Abstra
 	@inbounds for i in 1:A.cubical_dimension
 		y[i] = zero(N)
 	end
-	y = zeros(A.cubical_dimension) #resulting vector
 
-	#preallocate helper functions
-	sub_edge = Array{Int,1}(undef,A.order - 1)
-	multiplicities = Dict{Int,Int}()
-	final_counts = zeros(Int,A.order)
+	if A.order == 3
+		tri_contract!(A,x,y)
+	else
 
-	for edge in A
-		contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
+		#preallocate helper functions
+		sub_edge = Array{Int,1}(undef,A.order - 1)
+		multiplicities = Dict{Int,Int}()
+		final_counts = zeros(Int,A.order)
+
+		for edge in A
+			contract_edge_k_1!(edge,x,y,sub_edge,multiplicities,final_counts,A.order)
+		end
 	end
 
-	return y
+end
+
+function tri_contract!(A::ssten.COOTen,x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat}
+
+	@assert A.order == 3
+	#y = zeros(Float64,A.cubical_dimension)
+
+	@inbounds for i in 1:A.unique_nnz
+		ci = A.indices[i,1]
+        cj = A.indices[i,2]
+        ck = A.indices[i,3]
+		y[ci] += 2*x[cj]*x[ck]*A.vals[i]
+        y[cj] += 2*x[ci]*x[ck]*A.vals[i]
+        y[ck] += 2*x[cj]*x[ci]*A.vals[i]
+	end
 end
