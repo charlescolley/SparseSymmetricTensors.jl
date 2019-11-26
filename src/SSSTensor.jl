@@ -56,7 +56,8 @@ struct COOTen <: AbstractSSTen
 			return new(maximum(indices),order,unique_nnz,indices, values)
 	    else
 			cubical_dimension,unique_nnz,order,indices,values = COOTenVerifier(indices,values)
-	   	    return new(cubical_dimension,order,unique_nnz,sort(indices,dims=1),values)
+			perm = sort(1:unique_nnz, by=i->indices[i,:])
+	   	    return new(cubical_dimension,order,unique_nnz,indices[perm,:],values[perm])
 		end
 	end
 
@@ -66,8 +67,9 @@ struct COOTen <: AbstractSSTen
 			unique_nnz, order = size(indices)
 			return new(n,order,unique_nnz,indices,values)
 	    else
+    		perm = sort(1:unique_nnz, by=i->indices[i,:])
 			_,unique_nnz,order,indices,values = COOTenVerifier(indices,values,n)
-			return new(n,order,unique_nnz,sort(indices,dims=1),values)
+			return new(n,order,unique_nnz,indices[perm,:],values[perm])
 		end
 	end
 
