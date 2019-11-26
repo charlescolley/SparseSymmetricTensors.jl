@@ -34,7 +34,7 @@ struct COOTen <: AbstractSSTen
 	cubical_dimension::Int
 	order::Int
 	unique_nnz::Int
-	indices::Array{Int,2}
+	indices::Array{Int,2} #must be sorted lexigraphically for efficient Inner Products
 	vals::Array{Float64,1}
 
 	#edges::Vector{Tuple{Array{Int,1},Float64}}
@@ -45,7 +45,7 @@ struct COOTen <: AbstractSSTen
 			return new(maximum(indices),order,unique_nnz,indices, ones(unique_nnz))
 	    else
 			cubical_dimension,unique_nnz,order,edges = COOTenVerifier(indices)
-		    return new(cubical_dimension,order,unique_nnz,indices,ones(unique_nnz))
+		    return new(cubical_dimension,order,unique_nnz,sort(indices,dims=1),ones(unique_nnz))
 		end
 	end
 
@@ -56,7 +56,7 @@ struct COOTen <: AbstractSSTen
 			return new(maximum(indices),order,unique_nnz,indices, values)
 	    else
 			cubical_dimension,unique_nnz,order,indices,values = COOTenVerifier(indices,values)
-	   	    return new(cubical_dimension,order,unique_nnz,indices,values)
+	   	    return new(cubical_dimension,order,unique_nnz,sort(indices,dims=1),values)
 		end
 	end
 
@@ -67,7 +67,7 @@ struct COOTen <: AbstractSSTen
 			return new(n,order,unique_nnz,indices,values)
 	    else
 			_,unique_nnz,order,indices,values = COOTenVerifier(indices,values,n)
-			return new(n,order,unique_nnz,indices,values)
+			return new(n,order,unique_nnz,sort(indices,dims=1),values)
 		end
 	end
 
