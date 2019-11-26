@@ -25,18 +25,36 @@ end
   @testset "COOTen contraction tests" begin
     x, indices, vals = set_up(n,ord,nnz)
 
-    DICTen-A = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz])
-    COOTen-A  = ssten.COOTen(indices,vals)
+    DICTen_A = ssten.SSSTensor([(indices[i,:],vals[i]) for i in 1:nnz],n)
+    COOTen_A  = ssten.COOTen(indices,vals,n)
 
-    DICTen-contract = ssten.contract(DICTen-A,x,ord-1)
-    COOTen_contract  = ssten.contract_k_1(COOTen-A,x)
+    DICTen_contract = ssten.contract(DICTen_A,x,ord-1)
+    COOTen_contract  = ssten.contract_k_1(COOTen_A,x)
 
-    @test norm(dictTen_contract - matTen_contract)/norm(matTen_contract) < tol
+    println(DICTen_contract)
+    println(COOTen_contract)
+
+    @test norm(DICTen_contract - COOTen_contract)/norm(COOTen_contract) < tol
 
     COOTen_contract = zeros(n)
     ssten.contract_k_1!(indices,vals,x,COOTen_contract)
 
-    @test norm(dictTen_contract - COOTen_contract)/norm(COOTen_contract)< tol
+    @test norm(DICTen_contract - COOTen_contract)/norm(COOTen_contract)< tol
+  end
+
+  @testset "inner product tests" begin
+    _, indices, vals = set_up(n,ord,nnz)
+    indices = [1 2 3; 2 3 4; 1 3 4; 1 2 4; 2 3 5; 1 2 5]
+    vals = [.5,2.3,3.2,3.2,4.3,4.3]
+
+    COOTen_A  = ssten.COOTen(indices,vals)
+
+    test_vals = copy(vals)
+    test_vals = test_vals.^2
+    test_vals .*= 6
+
+    @test ssten.inner_product(COOTen_A ,COOTen_A) == sum(test_vals)
+
   end
   #=
   @testset "in place low mem contraction tests" begin

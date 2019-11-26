@@ -419,7 +419,7 @@ end
 function contract_k_1!(A::COOTen,x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat}
 	@assert A.cubical_dimension == length(x)
 
-	@inbounds for i in 1:A.cubical_dimension
+	for i in 1:A.cubical_dimension
 		y[i] = zero(N)
 	end
 
@@ -439,12 +439,32 @@ function contract_k_1!(A::COOTen,x::Array{N,1},y::Array{N,1}) where {N <: Abstra
 
 end
 
-function tri_contract!(A::ssten.COOTen,x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat}
+
+"""-----------------------------------------------------------------------------
+    tri_contract!(A,x,y)
+
+    Special case of contract_k_1!, when the input tensor is one of unique
+  triangles then when we write out the contraction operation and loop over the
+  rows of COOTen.indices.
+
+  Inputs:
+  -------
+  A - (COOTen sparse tensor):
+    The tensor to contract.
+
+  x - (Array{AbstractFloat,1}):
+    The vector to contract the tensor with
+
+  y - (Array{AbstractFloat,1}):
+    The place to store the output results, assumed to be zeroed.
+
+-----------------------------------------------------------------------------"""
+function tri_contract!(A::COOTen,x::Array{N,1},y::Array{N,1}) where {N <: AbstractFloat}
 
 	@assert A.order == 3
 	#y = zeros(Float64,A.cubical_dimension)
 
-	@inbounds for i in 1:A.unique_nnz
+	for i in 1:A.unique_nnz
 		ci = A.indices[i,1]
         cj = A.indices[i,2]
         ck = A.indices[i,3]
@@ -452,4 +472,37 @@ function tri_contract!(A::ssten.COOTen,x::Array{N,1},y::Array{N,1}) where {N <: 
         y[cj] += 2*x[ci]*x[ck]*A.vals[i]
         y[ck] += 2*x[cj]*x[ci]*A.vals[i]
 	end
+end
+
+"""-----------------------------------------------------------------------------
+    inner_product(A::COOTen,B::COOTen)
+
+    Computes the inner product between two COOTensors. currently assuming all
+    indices in each row are unique
+
+
+-----------------------------------------------------------------------------"""
+function inner_product(A::COOTen,B::COOTen)
+
+	@assert A.cubical_dimension == B.cubical_dimension
+	@assert A.order == B.order
+
+	multiplicity_factor = factorial(A.order )
+	inner_product_val = 0.0
+
+	A_head = 1
+	B_head = 1
+	while A_head <= A.unique_nnz && B_head <= B.unique_nnz
+		if A.indices[A_head,:] == B.indices[B_head,:]
+			println(A_head, A.vals[A_head])
+			inner_product_val += A.vals[A_head]*B.vals[B_head]*multiplicity_factor
+			A_head += 1
+			B_head += 1
+		elseif A.indices[A_head,:] < B.indices[B_head,:]
+			A_head += 1
+		else
+			B_head += 1
+		end
+	end
+	return inner_product_val
 end
