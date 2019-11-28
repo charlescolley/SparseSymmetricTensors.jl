@@ -310,7 +310,9 @@ function get_sub_tensor(A::Ten,indices::T,
 			sub_indices[i,:] = inds
 			sub_vals[i] = val
 		end
-		COOTen(sub_indices,sub_vals,true)#doesn't check input
+		p = sort(1:nnz, by=i->sub_indices[i,:])
+
+		COOTen(sub_indices[p,:],sub_vals[p],true)#doesn't check input
 	elseif Ten == SSSTensor
 		SSSTensor(sub_tensor_edges,true)#doesn't check input
 	end
