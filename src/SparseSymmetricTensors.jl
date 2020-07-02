@@ -88,6 +88,7 @@ Base.iterate(A::COOTen, state=1) =
 Base.length(A::COOTen) = A.unique_nnz
 
 
+#TODO: rename to DICTen
 mutable struct SSSTensor <: AbstractSSTen
     edges::Dict{Array{Int,1},AbstractFloat}
     cubical_dimension::Int

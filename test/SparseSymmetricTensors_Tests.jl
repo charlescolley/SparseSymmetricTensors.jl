@@ -1,9 +1,9 @@
 
-using Test
+#using Test
 #using MATLAB
 
-include("../src/SSSTensor.jl")
-using SparseSymmetricTensors
+#include("../src/SSSTensor.jl")
+#using SparseSymmetricTensors
 
 
 
@@ -19,13 +19,13 @@ using SparseSymmetricTensors
 
     @testset "Hyperedge List Constructor" begin
 
-        @test_throws ErrorException ssten.SSSTensor(unordered_edge) #unsorted indices
-        @test_throws ErrorException ssten.SSSTensor(unordered_edge,n)
-        @test_throws ErrorException ssten.SSSTensor(unordered_edge,1) # too small cubical dim
-        @test_throws ErrorException ssten.SSSTensor(valid_edges,1)
-        @test_throws ErrorException ssten.SSSTensor(negative_index,1)
-        @test_throws ErrorException ssten.SSSTensor(negative_index,n) #neg index
-        @test_throws ErrorException ssten.SSSTensor(negative_index)
+        @test_throws ErrorException SSSTensor(unordered_edge) #unsorted indices
+        @test_throws ErrorException SSSTensor(unordered_edge,n)
+        @test_throws ErrorException SSSTensor(unordered_edge,1) # too small cubical dim
+        @test_throws ErrorException SSSTensor(valid_edges,1)
+        @test_throws ErrorException SSSTensor(negative_index,1)
+        @test_throws ErrorException SSSTensor(negative_index,n) #neg index
+        @test_throws ErrorException SSSTensor(negative_index)
 
     end
 

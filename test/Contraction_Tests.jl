@@ -1,5 +1,3 @@
-
-
 using Test
 import LinearAlgebra.norm
 include("../src/SSSTensor.jl")
