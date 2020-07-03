@@ -1,12 +1,4 @@
 
-#using Test
-#using MATLAB
-
-#include("../src/SSSTensor.jl")
-#using SparseSymmetricTensors
-
-
-
 
 @testset "Contructor Tests" begin
 
@@ -33,9 +25,9 @@
 
         non_sym_tensor = rand(2,2,2,2)
         sym_tensor = ones(2,2,2,2)
-        @test_throws ErrorException ssten.SSSTensor(non_sym_tensor)
-        @test_throws ErrorException ssten.SSSTensor(sym_tensor,1) # too small cubical dim
-        @test_throws ErrorException ssten.SSSTensor(non_sym_tensor,1)
+        @test_throws ErrorException SSSTensor(non_sym_tensor)
+        @test_throws ErrorException SSSTensor(sym_tensor,1) # too small cubical dim
+        @test_throws ErrorException SSSTensor(non_sym_tensor,1)
 
     end
 
@@ -45,17 +37,17 @@
         D_unordered_edge = Dict(unordered_edge)
         D_negative_index = Dict(negative_index)
 
-        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge) #unsorted indices
-        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge,n)
-        @test_throws ErrorException ssten.SSSTensor(D_unordered_edge,1) # too small cubical dim
-        @test_throws ErrorException ssten.SSSTensor(D_valid_edges,1)
-        @test_throws ErrorException ssten.SSSTensor(D_negative_index,1)
-        @test_throws ErrorException ssten.SSSTensor(D_negative_index,n) #neg index
-        @test_throws ErrorException ssten.SSSTensor(D_negative_index)
+        @test_throws ErrorException SSSTensor(D_unordered_edge) #unsorted indices
+        @test_throws ErrorException SSSTensor(D_unordered_edge,n)
+        @test_throws ErrorException SSSTensor(D_unordered_edge,1) # too small cubical dim
+        @test_throws ErrorException SSSTensor(D_valid_edges,1)
+        @test_throws ErrorException SSSTensor(D_negative_index,1)
+        @test_throws ErrorException SSSTensor(D_negative_index,n) #neg index
+        @test_throws ErrorException SSSTensor(D_negative_index)
 
     end
 
-    @test_throws ErrorException ssten.SSSTensor()
+    @test_throws ErrorException SSSTensor()
 end
 
 @testset "COOTEN" begin
@@ -70,35 +62,38 @@ end
     @testset "COOTEN Constructor" begin
 
 
-        A = ssten.COOTen(valid_indices,rand(3),10)
+        A = COOTen(valid_indices,rand(3),10)
         @test A.cubical_dimension == 10
 
-         A = ssten.COOTen(valid_indices,rand(3))
+         A = COOTen(valid_indices,rand(3))
         @test A.cubical_dimension == maximum(valid_indices)
 
         #all params
-        @test_throws ErrorException ssten.COOTen(valid_indices, rand(2),10) #mis-matched dimensions
-        @test_throws ErrorException ssten.COOTen(unsorted_indices, valid_values,10) #unsorted rows
-        @test_throws ErrorException ssten.COOTen(zero_indexed_indices, valid_values,10) #zero indexed
+        @test_throws ErrorException COOTen(valid_indices, rand(2),10) #mis-matched dimensions
+        @test_throws ErrorException COOTen(unsorted_indices, valid_values,10) #unsorted rows
+        @test_throws ErrorException COOTen(zero_indexed_indices, valid_values,10) #zero indexed
 
-        @test_throws ErrorException ssten.COOTen(zero_indexed_indices,valid_values,2)#invalid cubicaldim
+        @test_throws ErrorException COOTen(zero_indexed_indices,valid_values,2)#invalid cubicaldim
 
         #without cubical dimension
-        @test_throws ErrorException ssten.COOTen(valid_indices, rand(2)) #mis-matched dimensions
-        @test_throws ErrorException ssten.COOTen(unsorted_indices, valid_values) #unsorted rows
-        @test_throws ErrorException ssten.COOTen(zero_indexed_indices, valid_values) #zero indexed
+        @test_throws ErrorException COOTen(valid_indices, rand(2)) #mis-matched dimensions
+        @test_throws ErrorException COOTen(unsorted_indices, valid_values) #unsorted rows
+        @test_throws ErrorException COOTen(zero_indexed_indices, valid_values) #zero indexed
 
         #without weights
-        @test_throws ErrorException ssten.COOTen(unsorted_indices) #unsorted rows
-        @test_throws ErrorException ssten.COOTen(zero_indexed_indices) #zero indexed
+        @test_throws ErrorException COOTen(unsorted_indices) #unsorted rows
+        @test_throws ErrorException COOTen(zero_indexed_indices) #zero indexed
 
     end
 
-    @test_throws ErrorException ssten.COOTen()
+    @test_throws ErrorException COOTen()
 
     @testset "COOTEN iterator" begin
         valid_indices = [1 2 3; 2 2 3; 1 2 4]
         valid_values = [1.0,2.0,3.0]
+        A = COOTen(valid_indices,valid_values)
+        @test length(A) == 3
+
 
     end
 

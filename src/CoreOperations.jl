@@ -18,6 +18,13 @@
 
 ------------------------------------------------------------------------------=#
 
+export get_sub_tensor
+export order
+export save
+export load
+export flatten
+export dense
+
 #=------------------------------------------------------------------------------
 						        Common Operators
 ------------------------------------------------------------------------------=#
@@ -129,7 +136,7 @@ end
     The Sparse symmetric tensor stored in the file.
 
 -----------------------------------------------------------------------------"""
-function load(filepath::String,enforceFormatting::Bool=false,
+function load(filepath::String;enforceFormatting::Bool=false,
               type::String="DICTen",nochecks::Bool=false)
 	#check path validity
 	@assert filepath[end-5:end] == ".ssten"
@@ -175,7 +182,7 @@ function load(filepath::String,enforceFormatting::Bool=false,
 			end
 			return SSSTensor([(indices[i,:],values[i]) for i in 1:m],n)
 		elseif type == "COOTen"
-			return COOTen(indices,values,n,nochecks)
+			return COOTen(indices,values,n;nocheck=nochecks)
 		else
 			error("type:$(type) not defined.\n Curently supporting:'DICTen','COOTen'.")
 		end
@@ -312,9 +319,9 @@ function get_sub_tensor(A::Ten,indices::T,
 		end
 		p = sort(1:nnz, by=i->sub_indices[i,:])
 
-		COOTen(sub_indices[p,:],sub_vals[p],true)#doesn't check input
+		COOTen(sub_indices[p,:],sub_vals[p];nocheck=true)#doesn't check input
 	elseif Ten == SSSTensor
-		SSSTensor(sub_tensor_edges,true)#doesn't check input
+		SSSTensor(sub_tensor_edges,nocheck=true)#doesn't check input
 	end
 end
 

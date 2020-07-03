@@ -44,7 +44,7 @@ struct COOTen <: AbstractSSTen
 
 	#edges::Vector{Tuple{Array{Int,1},Float64}}
 
-	function COOTen(indices::Array{Int,2},nocheck::Bool=false)
+	function COOTen(indices::Array{Int,2};nocheck::Bool=false)
 		if nocheck
 			unique_nnz, order = size(indices)
 			return new(maximum(indices),order,unique_nnz,indices, ones(unique_nnz))
@@ -54,7 +54,7 @@ struct COOTen <: AbstractSSTen
 		end
 	end
 
-	function COOTen(indices::Array{Int,2},values::Array{N,1},
+	function COOTen(indices::Array{Int,2},values::Array{N,1};
 		            nocheck::Bool=false) where N <: AbstractFloat
 		if nocheck
 			unique_nnz, order = size(indices)
@@ -66,10 +66,10 @@ struct COOTen <: AbstractSSTen
 		end
 	end
 
-	function COOTen(indices::Array{Int,2},values::Array{N,1},n::Int,
+	function COOTen(indices::Array{Int,2},values::Array{N,1},n::Int;
 		            nocheck::Bool=false) where N <: AbstractFloat
+		unique_nnz, order = size(indices)
 		if nocheck
-			unique_nnz, order = size(indices)
 			return new(n,order,unique_nnz,indices,values)
 	    else
     		perm = sort(1:unique_nnz, by=i->indices[i,:])
@@ -95,7 +95,7 @@ mutable struct SSSTensor <: AbstractSSTen
 
     function SSSTensor(e::Union{Array{Tuple{Array{Int,1},N},1},
 							    Dict{Array{Int64,1},N}},
-					   n::Int,nocheck::Bool=false) where {N <: AbstractFloat}
+					   n::Int;nocheck::Bool=false) where {N <: AbstractFloat}
 	     if nocheck
     		 new(reduce_edges(e),n)
 		 else
@@ -111,7 +111,7 @@ mutable struct SSSTensor <: AbstractSSTen
 
 	#Edge List constructor
 	function SSSTensor(e::Union{Array{Tuple{Array{Int,1},N},1},
-							    Dict{Array{Int64,1},N}},
+							    Dict{Array{Int64,1},N}};
 					   nocheck::Bool=false) where {N <: AbstractFloat}
 		n = SSSTensor_verifier(e,nocheck)
 		new(reduce_edges(e),n)
