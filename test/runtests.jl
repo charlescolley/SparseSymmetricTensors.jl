@@ -31,7 +31,7 @@ negative_index = [([-1,2,3],1.0)]
 tempath = "tmp_tensor.ssten"
 
 #include("SparseSymmetricTensors_Tests.jl")
-include("CoreOperations_Tests.jl")
-#include("Helpers_Tests.jl")
+#include("CoreOperations_Tests.jl")
+include("Helpers_Tests.jl")
 #include("HyperGraphAlgos_Tests.jl")
 #include("NumericalRoutines_Tests.jl")
